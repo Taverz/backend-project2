@@ -17,6 +17,7 @@ import (
 	"github.com/nikitakovalevtaverz/chirp/internal/port"
 	"github.com/nikitakovalevtaverz/chirp/internal/transport"
 	appmw "github.com/nikitakovalevtaverz/chirp/internal/transport/middleware"
+	usecaseTL "github.com/nikitakovalevtaverz/chirp/internal/usecase/timeline"
 	usecaseTweet "github.com/nikitakovalevtaverz/chirp/internal/usecase/tweet"
 	usecaseUser "github.com/nikitakovalevtaverz/chirp/internal/usecase/user"
 	"github.com/nikitakovalevtaverz/chirp/pkg/api"
@@ -69,7 +70,8 @@ func New(cfg *config.Config) (*App, error) {
 		slog.Warn("REDIS_URL not set — Redis disabled")
 	}
 
-	// --- Adapters ---
+	// --- Adapters (always in-memory for phase 2) ---
+	followRepo := memory.NewFollowRepo()
 	passwordHasher := memory.NewPasswordHasher(10)
 	authSvc, err := memory.NewAuthService(cfg.AccessTokenSecret, cfg.RefreshTokenSecret)
 	if err != nil {
@@ -86,10 +88,16 @@ func New(cfg *config.Config) (*App, error) {
 	listTweetsUC := usecaseTweet.NewListByUserUseCase(tweetRepo)
 	deleteTweetUC := usecaseTweet.NewDeleteUseCase(tweetRepo)
 
+	followUC := usecaseTL.NewFollowUseCase(followRepo)
+	unfollowUC := usecaseTL.NewUnfollowUseCase(followRepo)
+	listFollowersUC := usecaseTL.NewListFollowersUseCase(followRepo)
+	listFollowingUC := usecaseTL.NewListFollowingUseCase(followRepo)
+
 	// --- Transport ---
 	authHandler := transport.NewAuthHandler(registerUC, loginUC)
 	userHandler := transport.NewUserHandler(getProfileUC)
 	tweetHandler := transport.NewTweetHandler(createTweetUC, getTweetUC, listTweetsUC, deleteTweetUC)
+	followHandler := transport.NewFollowHandler(followUC, unfollowUC, listFollowersUC, listFollowingUC)
 
 	// --- Middleware ---
 	authGuard := appmw.NewAuthGuard(authSvc)
@@ -110,15 +118,19 @@ func New(cfg *config.Config) (*App, error) {
 			r.Post("/register", authHandler.Register)
 			r.Post("/login", authHandler.Login)
 		})
-
 		r.Get("/tweets/{id}", tweetHandler.Get)
 		r.Get("/users/{id}/tweets", tweetHandler.ListByUser)
+		r.Get("/users/{id}/followers", followHandler.Followers)
+		r.Get("/users/{id}/following", followHandler.Following)
 
+		// Protected
 		r.Group(func(r chi.Router) {
 			r.Use(authGuard.Middleware)
 			r.Get("/users/me", userHandler.Me)
 			r.Post("/tweets", tweetHandler.Create)
 			r.Delete("/tweets/{id}", tweetHandler.Delete)
+			r.Post("/users/{id}/follow", followHandler.Follow)
+			r.Delete("/users/{id}/follow", followHandler.Unfollow)
 		})
 	})
 
