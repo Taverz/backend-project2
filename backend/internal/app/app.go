@@ -12,6 +12,7 @@ import (
 	"github.com/nikitakovalevtaverz/chirp/internal/config"
 	"github.com/nikitakovalevtaverz/chirp/internal/transport"
 	appmw "github.com/nikitakovalevtaverz/chirp/internal/transport/middleware"
+	usecaseTweet "github.com/nikitakovalevtaverz/chirp/internal/usecase/tweet"
 	usecaseUser "github.com/nikitakovalevtaverz/chirp/internal/usecase/user"
 	"github.com/nikitakovalevtaverz/chirp/pkg/api"
 )
@@ -32,14 +33,23 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, err
 	}
 
+	// --- Adapters ---
+	tweetRepo := memory.NewTweetRepo()
+
 	// --- Use Cases ---
 	registerUC := usecaseUser.NewRegisterUseCase(userRepo, passwordHasher, authSvc)
 	loginUC := usecaseUser.NewLoginUseCase(userRepo, passwordHasher, authSvc)
 	getProfileUC := usecaseUser.NewGetProfileUseCase(userRepo)
 
+	createTweetUC := usecaseTweet.NewCreateUseCase(tweetRepo)
+	getTweetUC := usecaseTweet.NewGetByIDUseCase(tweetRepo)
+	listTweetsUC := usecaseTweet.NewListByUserUseCase(tweetRepo)
+	deleteTweetUC := usecaseTweet.NewDeleteUseCase(tweetRepo)
+
 	// --- Transport ---
 	authHandler := transport.NewAuthHandler(registerUC, loginUC)
 	userHandler := transport.NewUserHandler(getProfileUC)
+	tweetHandler := transport.NewTweetHandler(createTweetUC, getTweetUC, listTweetsUC, deleteTweetUC)
 
 	// --- Middleware ---
 	authGuard := appmw.NewAuthGuard(authSvc)
@@ -62,10 +72,16 @@ func New(cfg *config.Config) (*App, error) {
 			r.Post("/login", authHandler.Login)
 		})
 
+		// Tweets (public read)
+		r.Get("/tweets/{id}", tweetHandler.Get)
+		r.Get("/users/{id}/tweets", tweetHandler.ListByUser)
+
 		// Protected
 		r.Group(func(r chi.Router) {
 			r.Use(authGuard.Middleware)
 			r.Get("/users/me", userHandler.Me)
+			r.Post("/tweets", tweetHandler.Create)
+			r.Delete("/tweets/{id}", tweetHandler.Delete)
 		})
 	})
 
