@@ -1,0 +1,51 @@
+{
+  "session_id": "25468bf4",
+  "date": "2025-06-02",
+  "model": "deepseek-v4-pro",
+  "workspace": "/Users/nikitakovalevtaverz/Desktop/backend-project2",
+  "summary": {
+    "total_messages": 184,
+    "assistant_messages": 76,
+    "tool_result_messages": 98,
+    "tool_calls_total": 98,
+    "tool_errors": 1,
+    "thinking_blocks": 76,
+    "thinking_chars_total": 29658,
+    "thinking_chars_avg_per_block": 390,
+    "no_tool_assistant_turns": 9
+  },
+  "operations": {
+    "write_ops": 35,
+    "read_ops": 9,
+    "shell_ops": 41,
+    "checklist_ops": 9
+  },
+  "context": {
+    "transcript_size_bytes": 225614,
+    "system_prompt_size_bytes": 47336
+  },
+  "errors": [
+    {
+      "type": "code_bug",
+      "description": "Shutdown method used broken interface{} type assertions",
+      "self_corrected": true
+    },
+    {
+      "type": "environment",
+      "description": "go mod tidy failed due to macOS sandbox blocking ~/Library/Caches/go-build",
+      "self_corrected": true,
+      "workaround": "GOCACHE=/tmp/go-cache"
+    },
+    {
+      "type": "unused_import",
+      "description": "os imported but not used in main.go",
+      "self_corrected": true
+    }
+  ],
+  "cost_estimate": {
+    "input_tokens_approx": 128000,
+    "output_tokens_approx": 5000,
+    "total_tokens_approx": 133000,
+    "estimated_usd": 0.4
+  }
+}

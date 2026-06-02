@@ -1,0 +1,180 @@
+basePath: /api/v1
+definitions:
+  github_com_nikitakovalevtaverz_chirp_internal_usecase_user.AuthResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_internal_usecase_user.UserResponse'
+    type: object
+  github_com_nikitakovalevtaverz_chirp_internal_usecase_user.UserResponse:
+    properties:
+      bio:
+        type: string
+      created_at:
+        type: string
+      display_name:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      username:
+        type: string
+    type: object
+  github_com_nikitakovalevtaverz_chirp_pkg_api.ProblemDetail:
+    properties:
+      detail:
+        type: string
+      instance:
+        type: string
+      status:
+        type: integer
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_transport.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  internal_transport.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: dev@chirp.local
+    name: Chirp Team
+  description: Twitter clone backend API.
+  license:
+    name: MIT
+  title: Chirp API
+  version: 1.0.0
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns JWT tokens.
+      parameters:
+      - description: Login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_internal_usecase_user.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_pkg_api.ProblemDetail'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_pkg_api.ProblemDetail'
+      summary: Login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new account and returns JWT tokens.
+      parameters:
+      - description: Registration payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_internal_usecase_user.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_pkg_api.ProblemDetail'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_pkg_api.ProblemDetail'
+      summary: Register a new user
+      tags:
+      - auth
+  /health:
+    get:
+      description: Returns service health status.
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+      summary: Health check
+      tags:
+      - system
+  /hello:
+    get:
+      description: Returns a hello world JSON message.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Hello world
+      tags:
+      - system
+  /users/me:
+    get:
+      description: Returns the authenticated user's profile.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_internal_usecase_user.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_nikitakovalevtaverz_chirp_pkg_api.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
