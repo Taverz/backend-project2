@@ -91,7 +91,7 @@ func New(cfg *config.Config) (*App, error) {
 	listTweetsUC := usecaseTweet.NewListByUserUseCase(tweetRepo)
 	deleteTweetUC := usecaseTweet.NewDeleteUseCase(tweetRepo)
 
-	followUC := usecaseTL.NewFollowUseCase(followRepo)
+	followUC := usecaseTL.NewFollowUseCase(followRepo, userRepo)
 	unfollowUC := usecaseTL.NewUnfollowUseCase(followRepo)
 	listFollowersUC := usecaseTL.NewListFollowersUseCase(followRepo)
 	listFollowingUC := usecaseTL.NewListFollowingUseCase(followRepo)

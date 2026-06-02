@@ -36,17 +36,21 @@ func (r *TimelineRepo) GetHomeTimeline(_ context.Context, userID string, limit i
 
 	entries := r.entries[userID]
 
+	// Copy to avoid data race with concurrent AddEntry
+	sorted := make([]*timeline.Entry, len(entries))
+	copy(sorted, entries)
+
 	// Sort by scored_at desc, tweet_id desc
-	sort.Slice(entries, func(i, j int) bool {
+	sort.Slice(sorted, func(i, j int) bool {
 		if entries[i].ScoredAt.Equal(entries[j].ScoredAt) {
 			return entries[i].TweetID > entries[j].TweetID
 		}
-		return entries[i].ScoredAt.After(entries[j].ScoredAt)
+		return sorted[i].ScoredAt.After(sorted[j].ScoredAt)
 	})
 
 	start := 0
 	if cursor != "" {
-		for i, e := range entries {
+		for i, e := range sorted {
 			if e.TweetID == cursor {
 				start = i + 1
 				break
@@ -54,14 +58,14 @@ func (r *TimelineRepo) GetHomeTimeline(_ context.Context, userID string, limit i
 		}
 	}
 	end := start + limit
-	if end > len(entries) {
-		end = len(entries)
+	if end > len(sorted) {
+		end = len(sorted)
 	}
 
 	nextCursor := ""
-	if end < len(entries) {
-		nextCursor = entries[end-1].TweetID
+	if end < len(sorted) {
+		nextCursor = sorted[end-1].TweetID
 	}
 
-	return entries[start:end], nextCursor, nil
+	return sorted[start:end], nextCursor, nil
 }

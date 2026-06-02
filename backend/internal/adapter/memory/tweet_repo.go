@@ -80,6 +80,19 @@ func (r *TweetRepo) ListByAuthor(_ context.Context, authorID string, limit int, 
 func (r *TweetRepo) Delete(_ context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	t, ok := r.tweets[id]
+	if !ok {
+		return nil
+	}
 	delete(r.tweets, id)
+
+	// Remove from byUser index to prevent zombie entries
+	userIDs := r.byUser[t.AuthorID]
+	for i, tid := range userIDs {
+		if tid == id {
+			r.byUser[t.AuthorID] = append(userIDs[:i], userIDs[i+1:]...)
+			break
+		}
+	}
 	return nil
 }

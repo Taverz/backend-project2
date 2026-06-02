@@ -1,9 +1,9 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"os"
-
-	"github.com/nikitakovalevtaverz/chirp/internal/adapter/memory"
 )
 
 // Config holds all configuration for the application.
@@ -27,14 +27,14 @@ func Load() (*Config, error) {
 	accessSecret := getEnv("JWT_ACCESS_SECRET", "")
 	refreshSecret := getEnv("JWT_REFRESH_SECRET", "")
 
-	// Auto-generate secrets in development
+	// Auto-generate secrets in development only
 	if accessSecret == "" && getEnv("APP_ENV", "development") == "development" {
 		var err error
-		accessSecret, err = memory.GenerateSecret()
+		accessSecret, err = generateSecret()
 		if err != nil {
 			return nil, err
 		}
-		refreshSecret, err = memory.GenerateSecret()
+		refreshSecret, err = generateSecret()
 		if err != nil {
 			return nil, err
 		}
@@ -55,4 +55,13 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// generateSecret returns a random 32-byte hex string for use as a JWT secret.
+func generateSecret() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }

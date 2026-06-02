@@ -44,11 +44,17 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (*A
 	}
 
 	// Check uniqueness
-	existing, _ := uc.repo.GetByEmail(ctx, string(email))
+	existing, err := uc.repo.GetByEmail(ctx, string(email))
+	if err != nil {
+		return nil, err
+	}
 	if existing != nil {
 		return nil, domainUser.ErrEmailTaken
 	}
-	existing, _ = uc.repo.GetByUsername(ctx, string(uname))
+	existing, err = uc.repo.GetByUsername(ctx, string(uname))
+	if err != nil {
+		return nil, err
+	}
 	if existing != nil {
 		return nil, domainUser.ErrUsernameTaken
 	}

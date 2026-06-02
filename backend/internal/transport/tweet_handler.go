@@ -2,6 +2,7 @@ package transport
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -92,7 +93,9 @@ func (h *TweetHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Fan-out to followers (best-effort)
 	if h.fanOut != nil {
-		_ = h.fanOut.Execute(r.Context(), t.ID, t.AuthorID)
+		if err := h.fanOut.Execute(r.Context(), t.ID, t.AuthorID); err != nil {
+			slog.Error("fanout failed", "error", err, "tweet_id", t.ID)
+		}
 	}
 
 	api.RespondCreated(w, toTweetResponse(t))
