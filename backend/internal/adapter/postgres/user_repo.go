@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/nikitakovalevtaverz/chirp/internal/domain/user"
 )
 
@@ -82,5 +84,5 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*user.Us
 }
 
 func isNoRows(err error) bool {
-	return err != nil && err.Error() == "no rows in result set"
+	return errors.Is(err, pgx.ErrNoRows)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -40,7 +41,9 @@ func New(cfg *config.Config) (*App, error) {
 
 	if cfg.DatabaseURL != "" {
 		var err error
-		pgPool, err = postgres.NewPool(context.Background(), cfg.DatabaseURL)
+		pgCtx, pgCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer pgCancel()
+		pgPool, err = postgres.NewPool(pgCtx, cfg.DatabaseURL)
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +59,9 @@ func New(cfg *config.Config) (*App, error) {
 	var redisCli *redis.Client
 	if cfg.RedisURL != "" {
 		var err error
-		redisCli, err = redis.NewClient(context.Background(), cfg.RedisURL, "", 0)
+		redisCtx, redisCancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer redisCancel()
+		redisCli, err = redis.NewClient(redisCtx, cfg.RedisURL, "", 0)
 		if err != nil {
 			slog.Warn("failed to connect to Redis, continuing without it", "error", err)
 		}
@@ -145,12 +150,28 @@ func (a *App) Shutdown(ctx context.Context) error {
 	return a.server.Shutdown(ctx)
 }
 
+// healthHandler responds with service status.
+//
+//	@Summary		Health check
+//	@Description	Returns service health status.
+//	@Tags			system
+//	@Produce		plain
+//	@Success		200	{string}	string	"ok"
+//	@Router			/health [get]
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
 }
 
+// helloHandler responds with a greeting.
+//
+//	@Summary		Hello world
+//	@Description	Returns a hello world JSON message.
+//	@Tags			system
+//	@Produce		json
+//	@Success		200	{object}	map[string]string
+//	@Router			/hello [get]
 func helloHandler(w http.ResponseWriter, r *http.Request) {
 	api.RespondOK(w, map[string]string{"message": "hello world"})
 }

@@ -29,14 +29,6 @@ import (
 	"github.com/nikitakovalevtaverz/chirp/internal/config"
 )
 
-// @title           Chirp API
-// @version         1.0.0
-// @description     Twitter clone backend API.
-// @contact.name    Chirp Team
-// @contact.email   dev@chirp.local
-// @license.name    MIT
-// @host            localhost:8080
-// @BasePath        /api/v1
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM)
@@ -52,16 +44,21 @@ func main() {
 		log.Fatalf("failed to create app: %v", err)
 	}
 
+	serverErr := make(chan error, 1)
 	go func() {
 		addr := fmt.Sprintf(":%s", cfg.HTTPPort)
 		fmt.Printf("server listening on http://localhost%s\n", addr)
 		if err := application.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			serverErr <- err
 		}
 	}()
 
-	<-ctx.Done()
-	fmt.Println("\nshutting down...")
+	select {
+	case err := <-serverErr:
+		log.Fatalf("server error: %v", err)
+	case <-ctx.Done():
+		fmt.Println("\nshutting down...")
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

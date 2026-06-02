@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 
-	"github.com/nikitakovalevtaverz/chirp/internal/domain/user"
 	domainUser "github.com/nikitakovalevtaverz/chirp/internal/domain/user"
 	"github.com/nikitakovalevtaverz/chirp/internal/port"
 )
@@ -27,19 +26,19 @@ func NewRegisterUseCase(
 // Execute registers a new user and returns tokens.
 func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (*AuthResponse, error) {
 	// Validate username
-	uname, err := user.NewUsername(input.Username)
+	uname, err := domainUser.NewUsername(input.Username)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validate email
-	email, err := user.NewEmail(input.Email)
+	email, err := domainUser.NewEmail(input.Email)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validate password
-	pwd, err := user.NewPassword(input.Password)
+	pwd, err := domainUser.NewPassword(input.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +60,7 @@ func (uc *RegisterUseCase) Execute(ctx context.Context, input RegisterInput) (*A
 	}
 
 	// Create user
-	u := &user.User{
+	u := &domainUser.User{
 		ID:           newID(),
 		Username:     string(uname),
 		Email:        string(email),
