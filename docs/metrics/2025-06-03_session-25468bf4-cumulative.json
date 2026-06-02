@@ -1,0 +1,49 @@
+{
+  "session_id": "25468bf4",
+  "date_start": "2025-06-02",
+  "date_snapshot": "2025-06-03",
+  "model": "deepseek-v4-pro",
+  "workspace": "/Users/nikitakovalevtaverz/Desktop/backend-project2",
+  "cumulative": {
+    "total_messages": 721,
+    "assistant_messages": 279,
+    "tool_result_messages": 411,
+    "tool_calls_total": 411,
+    "tool_errors": 6,
+    "thinking_blocks": 273,
+    "thinking_chars_total": 93217,
+    "thinking_chars_avg_per_block": 341,
+    "no_tool_assistant_turns": 28
+  },
+  "operations": {
+    "write_ops": 182,
+    "read_ops": 48,
+    "shell_ops": 99,
+    "agent_ops": 9,
+    "checklist_ops": 57
+  },
+  "context": {
+    "transcript_size_bytes": 1006380,
+    "system_prompt_size_bytes_approx": 47336,
+    "estimated_context_usage_pct": 25
+  },
+  "cost_estimate": {
+    "input_tokens_approx": 610000,
+    "output_tokens_approx": 15000,
+    "total_tokens_approx": 625000,
+    "estimated_usd": 1.75
+  },
+  "phases_completed": {
+    "phase_1_core": true,
+    "phase_2_social": true
+  },
+  "bugs_found": {
+    "code_bugs": 3,
+    "data_races": 1,
+    "zombie_data": 1,
+    "reverse_dependency": 1,
+    "silent_error_drops": 2,
+    "environment": 1,
+    "duplicate_code": 1
+  }
+}
