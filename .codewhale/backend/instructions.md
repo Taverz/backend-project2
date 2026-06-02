@@ -1,14 +1,15 @@
 # Chirp Backend — AI Instructions
 
-> This file guides CodeWhale / DeepSeek when working in this project.
-> Keep it updated as architecture evolves.
+> Инструкции для CodeWhale/DeepSeek при работе с backend-частью проекта.
+> Для фронтенда будет отдельный файл в `.codewhale/frontend/instructions.md`.
 
 ## Project Identity
 
 - **Name:** Chirp — Twitter-клон
 - **Stack:** Go 1.23+, Chi router, PostgreSQL, Redis, Kafka, Elasticsearch, MinIO
 - **Architecture:** Модульный монолит с портами и адаптерами (clean architecture)
-- **Frontend:** Flutter (в отдельной директории, позже)
+- **Frontend:** Flutter ( отдельная директория, позже)
+- **Master doc:** `SOUL.md` — архитектура, модули, API, roadmap
 
 ## Directory Conventions
 
@@ -85,20 +86,31 @@ make test          # Все тесты с race detector
 make lint          # golangci-lint
 make tidy          # go mod tidy
 make build         # Сборка бинарника
+make swagger       # Генерация OpenAPI
 make migrate-up    # Применить миграции
 make migrate-down  # Откатить миграцию
 ```
 
 ## Phase Tracking
 
-Текущая фаза: **1 — Ядро**. Реализуем:
+Фаза 1 — Ядро ✅
 - [x] Структура проекта
 - [x] Hello world HTTP
 - [x] User + Auth модули (регистрация, логин, JWT)
 - [x] Tweet CRUD
 - [x] PostgreSQL + Redis адаптеры
 
-Следующая фаза: **2 — Социальные механики** (timeline, лайки, подписки).
+Фаза 2 — Социальные механики ✅
+- [x] Подписки (follow/unfollow)
+- [x] Лайки
+- [x] Timeline fan-out
+
+Фаза 3 — Поиск и уведомления ⬜
+- [ ] Elasticsearch
+- [ ] Kafka
+- [ ] Уведомления
+
+Фаза 4 — Media + Production ⬜
 
 ## Language
 

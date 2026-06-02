@@ -9,6 +9,7 @@ import (
 
 	domainTweet "github.com/nikitakovalevtaverz/chirp/internal/domain/tweet"
 	"github.com/nikitakovalevtaverz/chirp/internal/transport/middleware"
+	usecaseTL "github.com/nikitakovalevtaverz/chirp/internal/usecase/timeline"
 	usecaseTweet "github.com/nikitakovalevtaverz/chirp/internal/usecase/tweet"
 	"github.com/nikitakovalevtaverz/chirp/pkg/api"
 )
@@ -34,6 +35,7 @@ type TweetHandler struct {
 	getByID  *usecaseTweet.GetByIDUseCase
 	listUser *usecaseTweet.ListByUserUseCase
 	delete   *usecaseTweet.DeleteUseCase
+	fanOut   *usecaseTL.FanOutUseCase
 }
 
 // NewTweetHandler creates a TweetHandler.
@@ -42,12 +44,14 @@ func NewTweetHandler(
 	getByID *usecaseTweet.GetByIDUseCase,
 	listUser *usecaseTweet.ListByUserUseCase,
 	delete *usecaseTweet.DeleteUseCase,
+	fanOut *usecaseTL.FanOutUseCase,
 ) *TweetHandler {
 	return &TweetHandler{
 		create:   create,
 		getByID:  getByID,
 		listUser: listUser,
 		delete:   delete,
+		fanOut:   fanOut,
 	}
 }
 
@@ -84,6 +88,11 @@ func (h *TweetHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		mapTweetError(w, err)
 		return
+	}
+
+	// Fan-out to followers (best-effort)
+	if h.fanOut != nil {
+		_ = h.fanOut.Execute(r.Context(), t.ID, t.AuthorID)
 	}
 
 	api.RespondCreated(w, toTweetResponse(t))

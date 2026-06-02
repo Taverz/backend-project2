@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -72,6 +73,8 @@ func New(cfg *config.Config) (*App, error) {
 
 	// --- Adapters (always in-memory for phase 2) ---
 	followRepo := memory.NewFollowRepo()
+	likeRepo := memory.NewLikeRepo()
+	timelineRepo := memory.NewTimelineRepo()
 	passwordHasher := memory.NewPasswordHasher(10)
 	authSvc, err := memory.NewAuthService(cfg.AccessTokenSecret, cfg.RefreshTokenSecret)
 	if err != nil {
@@ -93,10 +96,16 @@ func New(cfg *config.Config) (*App, error) {
 	listFollowersUC := usecaseTL.NewListFollowersUseCase(followRepo)
 	listFollowingUC := usecaseTL.NewListFollowingUseCase(followRepo)
 
+	likeUC := usecaseTweet.NewLikeUseCase(likeRepo)
+	unlikeUC := usecaseTweet.NewUnlikeUseCase(likeRepo)
+
+	fanOutUC := usecaseTL.NewFanOutUseCase(timelineRepo, followRepo)
+	homeTimelineUC := usecaseTL.NewGetHomeTimelineUseCase(timelineRepo)
+
 	// --- Transport ---
 	authHandler := transport.NewAuthHandler(registerUC, loginUC)
 	userHandler := transport.NewUserHandler(getProfileUC)
-	tweetHandler := transport.NewTweetHandler(createTweetUC, getTweetUC, listTweetsUC, deleteTweetUC)
+	tweetHandler := transport.NewTweetHandler(createTweetUC, getTweetUC, listTweetsUC, deleteTweetUC, fanOutUC)
 	followHandler := transport.NewFollowHandler(followUC, unfollowUC, listFollowersUC, listFollowingUC)
 
 	// --- Middleware ---
@@ -123,6 +132,11 @@ func New(cfg *config.Config) (*App, error) {
 		r.Get("/users/{id}/followers", followHandler.Followers)
 		r.Get("/users/{id}/following", followHandler.Following)
 
+		r.Route("/timeline", func(r chi.Router) {
+			r.Use(authGuard.Middleware)
+			r.Get("/home", timelineHandler(homeTimelineUC))
+		})
+
 		// Protected
 		r.Group(func(r chi.Router) {
 			r.Use(authGuard.Middleware)
@@ -131,6 +145,8 @@ func New(cfg *config.Config) (*App, error) {
 			r.Delete("/tweets/{id}", tweetHandler.Delete)
 			r.Post("/users/{id}/follow", followHandler.Follow)
 			r.Delete("/users/{id}/follow", followHandler.Unfollow)
+			r.Post("/tweets/{id}/like", likeHandler(likeUC))
+			r.Delete("/tweets/{id}/like", unlikeHandler(unlikeUC))
 		})
 	})
 
@@ -186,4 +202,63 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 //	@Router			/hello [get]
 func helloHandler(w http.ResponseWriter, r *http.Request) {
 	api.RespondOK(w, map[string]string{"message": "hello world"})
+}
+
+func likeHandler(uc *usecaseTweet.LikeUseCase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, _ := appmw.UserIDFromContext(r.Context())
+		id := chi.URLParam(r, "id")
+		if err := uc.Execute(r.Context(), userID, id); err != nil {
+			api.InternalError(w, "internal server error")
+			return
+		}
+		api.RespondNoContent(w)
+	}
+}
+
+func unlikeHandler(uc *usecaseTweet.UnlikeUseCase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, _ := appmw.UserIDFromContext(r.Context())
+		id := chi.URLParam(r, "id")
+		if err := uc.Execute(r.Context(), userID, id); err != nil {
+			api.InternalError(w, "internal server error")
+			return
+		}
+		api.RespondNoContent(w)
+	}
+}
+
+func timelineHandler(uc *usecaseTL.GetHomeTimelineUseCase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, _ := appmw.UserIDFromContext(r.Context())
+		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+		limit = api.DefaultLimit(limit, 20, 50)
+		cursor := r.URL.Query().Get("cursor")
+
+		entries, nextCursor, err := uc.Execute(r.Context(), userID, limit, cursor)
+		if err != nil {
+			api.InternalError(w, "internal server error")
+			return
+		}
+
+		type item struct {
+			TweetID  string `json:"tweet_id"`
+			AuthorID string `json:"author_id"`
+			ScoredAt string `json:"scored_at"`
+		}
+		items := make([]item, len(entries))
+		for i, e := range entries {
+			items[i] = item{
+				TweetID:  e.TweetID,
+				AuthorID: e.AuthorID,
+				ScoredAt: e.ScoredAt.Format("2006-01-02T15:04:05Z"),
+			}
+		}
+
+		api.RespondOK(w, map[string]any{
+			"data":        items,
+			"next_cursor": nextCursor,
+			"has_more":    nextCursor != "",
+		})
+	}
 }
