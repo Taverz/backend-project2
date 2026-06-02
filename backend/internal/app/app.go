@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -9,7 +10,10 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/nikitakovalevtaverz/chirp/internal/adapter/memory"
+	"github.com/nikitakovalevtaverz/chirp/internal/adapter/postgres"
+	"github.com/nikitakovalevtaverz/chirp/internal/adapter/redis"
 	"github.com/nikitakovalevtaverz/chirp/internal/config"
+	"github.com/nikitakovalevtaverz/chirp/internal/port"
 	"github.com/nikitakovalevtaverz/chirp/internal/transport"
 	appmw "github.com/nikitakovalevtaverz/chirp/internal/transport/middleware"
 	usecaseTweet "github.com/nikitakovalevtaverz/chirp/internal/usecase/tweet"
@@ -20,21 +24,52 @@ import (
 // App is the main application struct that holds the HTTP server
 // and all dependencies.
 type App struct {
-	server *http.Server
+	server   *http.Server
+	pgPool   *postgres.Pool
+	redisCli *redis.Client
 }
 
 // New creates a new App with all dependencies wired up.
 func New(cfg *config.Config) (*App, error) {
+	// --- Adapters (PG or memory) ---
+	var (
+		userRepo  port.UserRepository
+		tweetRepo port.TweetRepository
+		pgPool    *postgres.Pool
+	)
+
+	if cfg.DatabaseURL != "" {
+		var err error
+		pgPool, err = postgres.NewPool(context.Background(), cfg.DatabaseURL)
+		if err != nil {
+			return nil, err
+		}
+		userRepo = postgres.NewUserRepo(pgPool)
+		tweetRepo = postgres.NewTweetRepo(pgPool)
+	} else {
+		slog.Warn("DATABASE_URL not set — using in-memory storage (data lost on restart)")
+		userRepo = memory.NewUserRepo()
+		tweetRepo = memory.NewTweetRepo()
+	}
+
+	// --- Redis (optional) ---
+	var redisCli *redis.Client
+	if cfg.RedisURL != "" {
+		var err error
+		redisCli, err = redis.NewClient(context.Background(), cfg.RedisURL, "", 0)
+		if err != nil {
+			slog.Warn("failed to connect to Redis, continuing without it", "error", err)
+		}
+	} else {
+		slog.Warn("REDIS_URL not set — Redis disabled")
+	}
+
 	// --- Adapters ---
-	userRepo := memory.NewUserRepo()
 	passwordHasher := memory.NewPasswordHasher(10)
 	authSvc, err := memory.NewAuthService(cfg.AccessTokenSecret, cfg.RefreshTokenSecret)
 	if err != nil {
 		return nil, err
 	}
-
-	// --- Adapters ---
-	tweetRepo := memory.NewTweetRepo()
 
 	// --- Use Cases ---
 	registerUC := usecaseUser.NewRegisterUseCase(userRepo, passwordHasher, authSvc)
@@ -63,7 +98,6 @@ func New(cfg *config.Config) (*App, error) {
 
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
-		// Public
 		r.Get("/health", healthHandler)
 		r.Get("/hello", helloHandler)
 
@@ -72,11 +106,9 @@ func New(cfg *config.Config) (*App, error) {
 			r.Post("/login", authHandler.Login)
 		})
 
-		// Tweets (public read)
 		r.Get("/tweets/{id}", tweetHandler.Get)
 		r.Get("/users/{id}/tweets", tweetHandler.ListByUser)
 
-		// Protected
 		r.Group(func(r chi.Router) {
 			r.Use(authGuard.Middleware)
 			r.Get("/users/me", userHandler.Me)
@@ -85,7 +117,6 @@ func New(cfg *config.Config) (*App, error) {
 		})
 	})
 
-	// Swagger UI
 	r.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
@@ -95,41 +126,31 @@ func New(cfg *config.Config) (*App, error) {
 			Addr:    ":" + cfg.HTTPPort,
 			Handler: r,
 		},
+		pgPool:   pgPool,
+		redisCli: redisCli,
 	}, nil
 }
 
-// ListenAndServe starts the HTTP server.
 func (a *App) ListenAndServe() error {
 	return a.server.ListenAndServe()
 }
 
-// Shutdown gracefully shuts down the HTTP server.
 func (a *App) Shutdown(ctx context.Context) error {
+	if a.redisCli != nil {
+		a.redisCli.Close()
+	}
+	if a.pgPool != nil {
+		a.pgPool.Close()
+	}
 	return a.server.Shutdown(ctx)
 }
 
-// healthHandler responds with service status.
-//
-//	@Summary		Health check
-//	@Description	Returns service health status.
-//	@Tags			system
-//	@Produce		plain
-//	@Success		200	{string}	string	"ok"
-//	@Router			/health [get]
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
 }
 
-// helloHandler responds with a greeting.
-//
-//	@Summary		Hello world
-//	@Description	Returns a hello world JSON message.
-//	@Tags			system
-//	@Produce		json
-//	@Success		200	{object}	map[string]string
-//	@Router			/hello [get]
 func helloHandler(w http.ResponseWriter, r *http.Request) {
 	api.RespondOK(w, map[string]string{"message": "hello world"})
 }

@@ -11,6 +11,12 @@ type Config struct {
 	HTTPPort string
 	AppEnv   string
 
+	// PostgreSQL
+	DatabaseURL string
+
+	// Redis
+	RedisURL string
+
 	// JWT secrets (hex-encoded)
 	AccessTokenSecret  string
 	RefreshTokenSecret string
@@ -37,6 +43,8 @@ func Load() (*Config, error) {
 	return &Config{
 		HTTPPort:           getEnv("HTTP_PORT", "8080"),
 		AppEnv:             getEnv("APP_ENV", "development"),
+		DatabaseURL:        getEnv("DATABASE_URL", ""),
+		RedisURL:           getEnv("REDIS_URL", ""),
 		AccessTokenSecret:  accessSecret,
 		RefreshTokenSecret: refreshSecret,
 	}, nil

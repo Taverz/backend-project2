@@ -96,7 +96,7 @@ make migrate-down  # Откатить миграцию
 - [x] Hello world HTTP
 - [x] User + Auth модули (регистрация, логин, JWT)
 - [x] Tweet CRUD
-- [ ] PostgreSQL + Redis адаптеры
+- [x] PostgreSQL + Redis адаптеры
 
 Следующая фаза: **2 — Социальные механики** (timeline, лайки, подписки).
 
