@@ -27,7 +27,7 @@ import (
 // App is the main application struct that holds the HTTP server
 // and all dependencies.
 type App struct {
-	server   *http.Server
+	Server   *http.Server
 	pgPool   *postgres.Pool
 	redisCli *redis.Client
 }
@@ -155,7 +155,7 @@ func New(cfg *config.Config) (*App, error) {
 	))
 
 	return &App{
-		server: &http.Server{
+		Server: &http.Server{
 			Addr:    ":" + cfg.HTTPPort,
 			Handler: r,
 		},
@@ -165,7 +165,7 @@ func New(cfg *config.Config) (*App, error) {
 }
 
 func (a *App) ListenAndServe() error {
-	return a.server.ListenAndServe()
+	return a.Server.ListenAndServe()
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
@@ -175,7 +175,7 @@ func (a *App) Shutdown(ctx context.Context) error {
 	if a.pgPool != nil {
 		a.pgPool.Close()
 	}
-	return a.server.Shutdown(ctx)
+	return a.Server.Shutdown(ctx)
 }
 
 // healthHandler responds with service status.

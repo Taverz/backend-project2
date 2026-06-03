@@ -8,9 +8,13 @@ GOENV := GOTMPDIR=/tmp/go-tmp GOCACHE=/tmp/go-cache GONOSUMCHECK='*'
 run:
 	cd $(BACKEND_DIR) && $(GOENV) go run ./cmd/server/
 
-## test: Run all tests
+## test: Run all tests with race detector
 test:
 	cd $(BACKEND_DIR) && go test -v -race -count=1 ./...
+
+## test-cover: Run all tests with coverage report
+test-cover:
+	cd $(BACKEND_DIR) && mkdir -p tests/coverage && go test -v -race -count=1 -coverprofile=tests/coverage/coverage.out -covermode=atomic ./... && go tool cover -html=tests/coverage/coverage.out -o tests/coverage/coverage.html && go tool cover -func=tests/coverage/coverage.out | tail -1 | tee tests/coverage/coverage.summary
 
 ## lint: Run golangci-lint
 lint:
