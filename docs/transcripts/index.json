@@ -1,9 +1,26 @@
 {
-  "sessions": [],
+  "sessions": [
+    {
+      "session_id": "25468bf4",
+      "date": "2025-06-03",
+      "model": "deepseek-v4-pro",
+      "workspace": "/Users/nikitakovalevtaverz/Desktop/backend-project2",
+      "objective": "Chirp — Twitter-клон. Фаза 1 (ядро) + Фаза 2 (социальные механики)",
+      "phases": ["phase_1_core", "phase_2_social"],
+      "total_messages": 721,
+      "assistant_messages": 279,
+      "tool_calls": 411,
+      "tool_errors": 6,
+      "thinking_chars_total": 93217,
+      "transcript_size_bytes": 1268087,
+      "estimated_cost_usd": 1.75
+    }
+  ],
   "description": "Index of saved AI session transcripts. Updated automatically by save-transcript.sh.",
   "format": {
-    "transcript": "docs/transcripts/{session_id}.jsonl — full JSONL transcript",
-    "traces": "docs/transcripts/{session_id}.traces.json — structured traces",
-    "meta": "docs/transcripts/{session_id}.meta.json — metadata"
+    "transcript": "docs/transcripts/{session_id}.jsonl",
+    "traces": "docs/transcripts/{session_id}.traces.json",
+    "meta": "docs/transcripts/{session_id}.meta.json",
+    "prompts": "docs/prompts/{session_id}.md"
   }
 }
