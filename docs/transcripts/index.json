@@ -1,0 +1,9 @@
+{
+  "sessions": [],
+  "description": "Index of saved AI session transcripts. Updated automatically by save-transcript.sh.",
+  "format": {
+    "transcript": "docs/transcripts/{session_id}.jsonl — full JSONL transcript",
+    "traces": "docs/transcripts/{session_id}.traces.json — structured traces",
+    "meta": "docs/transcripts/{session_id}.meta.json — metadata"
+  }
+}

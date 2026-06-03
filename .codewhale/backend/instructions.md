@@ -133,16 +133,31 @@ make migrate-down  # Откатить миграцию
 ### End of session
 Когда пользователь явно завершает сессию или говорит «запиши в лог»:
 
-1. **Собрать метрики** из `session://active/transcript` через RLM:
+1. **Сохранить transcript** — получить `session://active/transcript` через RLM, затем:
+   ```bash
+   # ./docs/scripts/save-transcript.sh <session_id> <path_to_jsonl> [--traces]
+   ```
+   Это сохраняет JSONL → `docs/transcripts/`, обновляет `index.json`, и при `--traces`
+   генерирует структурированные трассы.
+
+2. **Собрать метрики** из `session://active/transcript` через RLM:
    - `total_messages`, `assistant_messages`, `tool_calls_total`, `tool_errors`
    - `thinking_chars_total`, `thinking_chars_avg`
    - `write_ops`, `read_ops`, `shell_ops`, `no_tool_assistant_turns`
 
-2. **Записать в `docs/AI-LOG.md`**: задача, метрики, созданные файлы, ошибки, acceptance rate
+3. **Записать в `docs/AI-LOG.md`**: задача, метрики, созданные файлы, ошибки, acceptance rate
 
-3. **Сохранить сырые метрики** в `docs/metrics/YYYY-MM-DD_session-ID.json`
+4. **Сохранить сырые метрики** в `docs/metrics/YYYY-MM-DD_session-ID.json`
 
-4. **Оценить стоимость**: ~133K токенов ≈ $0.30-0.50 за среднюю сессию
+5. **Оценить стоимость**: ~133K токенов ≈ $0.30-0.50 за среднюю сессию
+
+### Replay
+Для воспроизведения контекста (например, при ошибке AI):
+```bash
+./docs/scripts/replay.sh 25468bf4            # вся сессия
+./docs/scripts/replay.sh 25468bf4 --turn 5   # до 5-го хода
+```
+Результат — читаемый промт. Копируется в новую сессию CodeWhale.
 
 ### Self-correction
 - При обнаружении бага в собственном коде — исправить немедленно, записать в лог ошибок
