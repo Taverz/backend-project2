@@ -163,6 +163,8 @@ Traces (пример)
 | [`docs/shared/WIDGET-DATA-FLOW.md`](docs/shared/WIDGET-DATA-FLOW.md) | Screen → Widget Tree → API Data → Model → UI Model → Widget Prop |
 | [`docs/CRITIQUE.md`](docs/CRITIQUE.md) | Критический анализ документации: что пропущено, что улучшить |
 | [`docs/WHY-AI-FAILS.md`](docs/WHY-AI-FAILS.md) | 10 причин ошибок AI и какие документы их исправляют |
+| [`docs/WORKFLOW.md`](docs/WORKFLOW.md) | Полный flow команды: 8 ролей, 8 фаз, кто что создаёт и проверяет |
+| [`docs/DESIGNER-AI-FLOW.md`](docs/DESIGNER-AI-FLOW.md) | Дизайнер + AI: какие файлы нужны для генерации дизайна и как его ревьюить |
 
 ### Multi-Platform
 
