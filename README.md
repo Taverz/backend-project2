@@ -105,6 +105,28 @@ Traces (пример)
 | [`docs/scripts/replay.sh`](docs/scripts/replay.sh) | Воспроизведение сессии |
 | [`docs/scripts/generate-traces.py`](docs/scripts/generate-traces.py) | Генерация трасс из JSONL |
 
+### Flutter
+
+| Файл | Описание |
+|------|----------|
+| [`docs/flutter/STRUCTURE.md`](docs/flutter/STRUCTURE.md) | Полная структура Flutter-проекта: auth, состояния, пагинация, формы |
+
+### Web (TypeScript / React)
+
+| Файл | Описание |
+|------|----------|
+| [`docs/web/STRUCTURE.md`](docs/web/STRUCTURE.md) | Структура Web-фронтенда: React + TypeScript + Vite + Tailwind |
+
+### Flow фич (cross-platform: backend + все клиенты)
+
+| Файл | Описание |
+|------|----------|
+| [`docs/shared/auth-flow/FLOW-README.md`](docs/shared/auth-flow/FLOW-README.md) | Auth: бизнес-требования → SPEC → код на 5 платформах → верификация |
+| [`docs/shared/auth-flow/01-REQUIREMENTS.md`](docs/shared/auth-flow/01-REQUIREMENTS.md) | Шаг 1: 6 требований, 10 acceptance criteria |
+| [`docs/shared/auth-flow/02-SPEC.md`](docs/shared/auth-flow/02-SPEC.md) | Шаг 2: API, хранение токенов, auth guard для каждой платформы |
+| [`docs/shared/auth-flow/03-CODE.md`](docs/shared/auth-flow/03-CODE.md) | Шаг 3: код Go + Flutter + Android + iOS + Web |
+| [`docs/shared/auth-flow/04-VERIFICATION.md`](docs/shared/auth-flow/04-VERIFICATION.md) | Шаг 4: тесты + curl + таблица фронтенд-сценариев |
+
 ### Frontend (Flutter)
 
 | Файл | Описание |

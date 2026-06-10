@@ -36,10 +36,14 @@ docs/
 │   ├── STRUCTURE.md         ← MVVM? Clean Architecture? директории
 │   └── navigation/          ← NavGraph, deep links
 │
-└── ios/                     ← специфика iOS (Swift)
-    ├── IOS.md               ← карта проекта
-    ├── STRUCTURE.md         ← MVVM? Coordinator? директории
-    └── navigation/          ← SwiftUI NavigationStack / UIKit
+├── ios/                     ← специфика iOS (Swift)
+│   ├── IOS.md               ← карта проекта
+│   ├── STRUCTURE.md         ← MVVM? Coordinator? директории
+│   └── navigation/          ← SwiftUI NavigationStack / UIKit
+│
+└── web/                     ← специфика Web (TypeScript)
+    ├── STRUCTURE.md         ← React + TypeScript, hooks, api, pages
+    └── styles/              ← Tailwind theme
 ```
 
 ---

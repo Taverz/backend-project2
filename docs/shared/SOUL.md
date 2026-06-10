@@ -23,6 +23,7 @@
 | Flutter | Dart | ⬜ Не начат | `flutter/` |
 | Android | Kotlin | ⬜ Не начат | `android/` |
 | iOS | Swift | ⬜ Не начат | `ios/` |
+| Web | TypeScript | ⬜ Не начат | `web/` |
 
 ---
 
