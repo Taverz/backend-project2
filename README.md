@@ -105,6 +105,12 @@ Traces (пример)
 | [`docs/scripts/replay.sh`](docs/scripts/replay.sh) | Воспроизведение сессии |
 | [`docs/scripts/generate-traces.py`](docs/scripts/generate-traces.py) | Генерация трасс из JSONL |
 
+### Frontend (Flutter)
+
+| Файл | Описание |
+|------|----------|
+| [`docs/examples/frontend/FLUTTER.md`](docs/examples/frontend/FLUTTER.md) | Полная карта Flutter-фронтенда: экраны, маршруты, структура, API-слой, модели, состояние, тема |
+
 ### Flow разработки с AI
 
 | Файл | Описание |
