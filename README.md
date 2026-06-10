@@ -165,6 +165,8 @@ Traces (пример)
 | [`docs/WHY-AI-FAILS.md`](docs/WHY-AI-FAILS.md) | 10 причин ошибок AI и какие документы их исправляют |
 | [`docs/WORKFLOW.md`](docs/WORKFLOW.md) | Полный flow команды: 8 ролей, 8 фаз, кто что создаёт и проверяет |
 | [`docs/DESIGNER-AI-FLOW.md`](docs/DESIGNER-AI-FLOW.md) | Дизайнер + AI: какие файлы нужны для генерации дизайна и как его ревьюить |
+| [`design/README.md`](design/README.md) | Папка дизайнера: шаблон для всех фич (project-overview + tokens + feature/components) |
+| [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) | Mermaid-диаграммы: screen flow, sequence, state machine, component tree, data flow, decision tree |
 
 ### Multi-Platform
 
