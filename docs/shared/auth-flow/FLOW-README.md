@@ -7,11 +7,20 @@
 ```
 docs/shared/auth-flow/
 ├── FLOW-README.md          ← этот файл
-├── 01-REQUIREMENTS.md      ← бизнес-требования
-├── 02-SPEC.md              ← кроссплатформенная спецификация
-├── 03-CODE.md              ← код на каждой платформе
-└── 04-VERIFICATION.md      ← верификация (тесты + curl)
+├── 01-REQUIREMENTS.md      ← бизнес-требования (пишет человек)
+├── 02-SPEC.md              ← спецификация API (контракт для всех платформ)
+├── 03-ARCHITECTURE.md      ← sequence diagrams, data flow, screen flow, model structure, widget tree
+├── 04-PATTERNS.md          ← cross-platform patterns (для AI, без кода)
+└── 05-VERIFICATION.md      ← тесты + curl + таблица сценариев
 ```
+
+## Как читать
+
+1. **01-REQUIREMENTS.md** — что должна делать фича (человек → AI)
+2. **02-SPEC.md** — API контракт (единый для всех платформ)
+3. **03-ARCHITECTURE.md** — КАК это работает: sequence диаграммы, data flow, screen flow, widget tree, state machine (AI читает → генерирует код)
+4. **04-PATTERNS.md** — платформенные паттерны: токены, auth guard, form validation, race conditions (AI читает → адаптирует под язык)
+5. **05-VERIFICATION.md** — как проверить, что всё работает
 
 ## Что делает каждая платформа
 
@@ -23,5 +32,9 @@ docs/shared/auth-flow/
 | iOS (Swift) | Формы, токены (Keychain), NavigationStack guard |
 | Web (TypeScript) | Формы, токены (httpOnly cookie / localStorage), Router guard |
 
-**Ключевое:** бизнес-логика одна (валидация → bcrypt → JWT → response).
-UI разный (Material, Cupertino, Web). Хранение токенов разное (SharedPrefs, Keychain, cookie).
+## Принцип
+
+Бизнес-логика одна (валидация → bcrypt → JWT → response).
+UI разный (Material, Cupertino, Web).
+Хранение токенов разное (Keychain, SharedPrefs, cookie).
+Паттерны одинаковые (auth state, 401→refresh, guard, form validation).

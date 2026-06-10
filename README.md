@@ -123,9 +123,10 @@ Traces (пример)
 |------|----------|
 | [`docs/shared/auth-flow/FLOW-README.md`](docs/shared/auth-flow/FLOW-README.md) | Auth: бизнес-требования → SPEC → код на 5 платформах → верификация |
 | [`docs/shared/auth-flow/01-REQUIREMENTS.md`](docs/shared/auth-flow/01-REQUIREMENTS.md) | Шаг 1: 6 требований, 10 acceptance criteria |
-| [`docs/shared/auth-flow/02-SPEC.md`](docs/shared/auth-flow/02-SPEC.md) | Шаг 2: API, хранение токенов, auth guard для каждой платформы |
-| [`docs/shared/auth-flow/03-CODE.md`](docs/shared/auth-flow/03-CODE.md) | Шаг 3: код Go + Flutter + Android + iOS + Web |
-| [`docs/shared/auth-flow/04-VERIFICATION.md`](docs/shared/auth-flow/04-VERIFICATION.md) | Шаг 4: тесты + curl + таблица фронтенд-сценариев |
+| [`docs/shared/auth-flow/02-SPEC.md`](docs/shared/auth-flow/02-SPEC.md) | Шаг 2: API контракт (для всех платформ) |
+| [`docs/shared/auth-flow/03-ARCHITECTURE.md`](docs/shared/auth-flow/03-ARCHITECTURE.md) | Шаг 3: sequence диаграммы, data/screen/model structure, state machine |
+| [`docs/shared/auth-flow/04-PATTERNS.md`](docs/shared/auth-flow/04-PATTERNS.md) | Шаг 4: платформенные паттерны (для AI, без кода) |
+| [`docs/shared/auth-flow/05-VERIFICATION.md`](docs/shared/auth-flow/05-VERIFICATION.md) | Шаг 5: тесты + curl + таблица сценариев |
 
 ### Frontend (Flutter)
 
