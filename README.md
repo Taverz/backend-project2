@@ -121,6 +121,12 @@ Traces (пример)
 | [`docs/examples/media-upload/03-CODE.md`](docs/examples/media-upload/03-CODE.md) | Шаг 3: AI пишет код модулями, каждый проверяется |
 | [`docs/examples/media-upload/04-VERIFICATION.md`](docs/examples/media-upload/04-VERIFICATION.md) | Шаг 4: тесты и curl — единственная честная верификация |
 
+### Multi-Platform
+
+| Файл | Описание |
+|------|----------|
+| [`docs/MULTI-PLATFORM.md`](docs/MULTI-PLATFORM.md) | Как организовать документацию для проекта на N платформ: shared vs platform-specific, какие файлы обязательны |
+
 ### Прочее
 
 | Файл | Описание |
