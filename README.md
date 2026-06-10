@@ -155,6 +155,7 @@ Traces (пример)
 | [`docs/shared/API.md`](docs/shared/API.md) | Контракт backend↔клиенты: все эндпоинты, request/response |
 | [`docs/shared/FEATURES.md`](docs/shared/FEATURES.md) | Каждая фича + acceptance criteria |
 | [`docs/shared/SCREENS.md`](docs/shared/SCREENS.md) | Экранная карта, состояния (loading/empty/error/data) |
+| [`docs/shared/DATA-REQUIREMENTS.md`](docs/shared/DATA-REQUIREMENTS.md) | Screen → API Data Mapping: какие поля нужны каждому экрану, а какие отсутствуют |
 | [`docs/shared/DESIGN-SYSTEM.md`](docs/shared/DESIGN-SYSTEM.md) | Цвета, шрифты, компоненты, иконки |
 | [`docs/shared/ERRORS.md`](docs/shared/ERRORS.md) | Все ошибки и реакция клиента |
 | [`docs/shared/DESIGN-CONTRACT.md`](docs/shared/DESIGN-CONTRACT.md) | Контракт между Figma и кодом: naming, экспорт, состояния |
