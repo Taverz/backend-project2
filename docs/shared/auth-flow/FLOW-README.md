@@ -11,7 +11,9 @@ docs/shared/auth-flow/
 ├── 02-SPEC.md              ← спецификация API (контракт для всех платформ)
 ├── 03-ARCHITECTURE.md      ← sequence diagrams, data flow, screen flow, model structure, widget tree
 ├── 04-PATTERNS.md          ← cross-platform patterns (для AI, без кода)
-└── 05-VERIFICATION.md      ← тесты + curl + таблица сценариев
+├── 05-VERIFICATION.md      ← тесты + curl + таблица сценариев
+├── 06-UI-STATES.md         ← все UI-состояния каждого экрана (таблицы)
+└── 07-TEST-CASES.md        ← тест-кейсы без кода (precondition → step → result)
 ```
 
 ## Как читать

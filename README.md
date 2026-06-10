@@ -127,6 +127,8 @@ Traces (пример)
 | [`docs/shared/auth-flow/03-ARCHITECTURE.md`](docs/shared/auth-flow/03-ARCHITECTURE.md) | Шаг 3: sequence диаграммы, data/screen/model structure, state machine |
 | [`docs/shared/auth-flow/04-PATTERNS.md`](docs/shared/auth-flow/04-PATTERNS.md) | Шаг 4: платформенные паттерны (для AI, без кода) |
 | [`docs/shared/auth-flow/05-VERIFICATION.md`](docs/shared/auth-flow/05-VERIFICATION.md) | Шаг 5: тесты + curl + таблица сценариев |
+| [`docs/shared/auth-flow/06-UI-STATES.md`](docs/shared/auth-flow/06-UI-STATES.md) | Все UI-состояния экранов: Login (9), Register (12), Splash (5), AuthGuard (5) |
+| [`docs/shared/auth-flow/07-TEST-CASES.md`](docs/shared/auth-flow/07-TEST-CASES.md) | 20 тест-кейсов без кода: регистрация, логин, refresh, guard, logout |
 
 ### Frontend (Flutter)
 
