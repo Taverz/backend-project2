@@ -17,6 +17,10 @@ type Config struct {
 	// Redis
 	RedisURL string
 
+	// Elasticsearch / Kafka
+	ElasticsearchURL string
+	KafkaBrokers     string
+
 	// JWT secrets (hex-encoded)
 	AccessTokenSecret  string
 	RefreshTokenSecret string
@@ -44,7 +48,8 @@ func Load() (*Config, error) {
 		HTTPPort:           getEnv("HTTP_PORT", "8080"),
 		AppEnv:             getEnv("APP_ENV", "development"),
 		DatabaseURL:        getEnv("DATABASE_URL", ""),
-		RedisURL:           getEnv("REDIS_URL", ""),
+		ElasticsearchURL:   getEnv("ELASTICSEARCH_URL", ""),
+		KafkaBrokers:       getEnv("KAFKA_BROKERS", ""),
 		AccessTokenSecret:  accessSecret,
 		RefreshTokenSecret: refreshSecret,
 	}, nil

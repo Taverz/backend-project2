@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	domainTweet "github.com/nikitakovalevtaverz/chirp/internal/domain/tweet"
+	"github.com/nikitakovalevtaverz/chirp/internal/port"
 	"github.com/nikitakovalevtaverz/chirp/internal/transport/middleware"
 	usecaseTL "github.com/nikitakovalevtaverz/chirp/internal/usecase/timeline"
 	usecaseTweet "github.com/nikitakovalevtaverz/chirp/internal/usecase/tweet"
@@ -32,11 +33,12 @@ type TweetResponse struct {
 
 // TweetHandler handles tweet endpoints.
 type TweetHandler struct {
-	create   *usecaseTweet.CreateUseCase
-	getByID  *usecaseTweet.GetByIDUseCase
-	listUser *usecaseTweet.ListByUserUseCase
-	delete   *usecaseTweet.DeleteUseCase
-	fanOut   *usecaseTL.FanOutUseCase
+	create      *usecaseTweet.CreateUseCase
+	getByID     *usecaseTweet.GetByIDUseCase
+	listUser    *usecaseTweet.ListByUserUseCase
+	delete      *usecaseTweet.DeleteUseCase
+	fanOut      *usecaseTL.FanOutUseCase
+	searchEngine port.SearchEngine
 }
 
 // NewTweetHandler creates a TweetHandler.
@@ -46,13 +48,15 @@ func NewTweetHandler(
 	listUser *usecaseTweet.ListByUserUseCase,
 	delete *usecaseTweet.DeleteUseCase,
 	fanOut *usecaseTL.FanOutUseCase,
+	searchEngine port.SearchEngine,
 ) *TweetHandler {
 	return &TweetHandler{
-		create:   create,
-		getByID:  getByID,
-		listUser: listUser,
-		delete:   delete,
-		fanOut:   fanOut,
+		create:      create,
+		getByID:     getByID,
+		listUser:    listUser,
+		delete:      delete,
+		fanOut:      fanOut,
+		searchEngine: searchEngine,
 	}
 }
 
@@ -95,6 +99,13 @@ func (h *TweetHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if h.fanOut != nil {
 		if err := h.fanOut.Execute(r.Context(), t.ID, t.AuthorID); err != nil {
 			slog.Error("fanout failed", "error", err, "tweet_id", t.ID)
+		}
+	}
+
+	// Index for search (best-effort)
+	if h.searchEngine != nil {
+		if err := h.searchEngine.IndexTweet(r.Context(), t); err != nil {
+			slog.Error("search index failed", "error", err, "tweet_id", t.ID)
 		}
 	}
 

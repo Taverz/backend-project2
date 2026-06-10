@@ -14,10 +14,13 @@ import (
 	"github.com/nikitakovalevtaverz/chirp/internal/adapter/memory"
 	"github.com/nikitakovalevtaverz/chirp/internal/adapter/postgres"
 	"github.com/nikitakovalevtaverz/chirp/internal/adapter/redis"
+	"github.com/nikitakovalevtaverz/chirp/internal/adapter/es"
 	"github.com/nikitakovalevtaverz/chirp/internal/config"
 	"github.com/nikitakovalevtaverz/chirp/internal/port"
 	"github.com/nikitakovalevtaverz/chirp/internal/transport"
 	appmw "github.com/nikitakovalevtaverz/chirp/internal/transport/middleware"
+	usecaseNotif "github.com/nikitakovalevtaverz/chirp/internal/usecase/notification"
+	usecaseSearch "github.com/nikitakovalevtaverz/chirp/internal/usecase/search"
 	usecaseTL "github.com/nikitakovalevtaverz/chirp/internal/usecase/timeline"
 	usecaseTweet "github.com/nikitakovalevtaverz/chirp/internal/usecase/tweet"
 	usecaseUser "github.com/nikitakovalevtaverz/chirp/internal/usecase/user"
@@ -77,11 +80,27 @@ func New(cfg *config.Config) (*App, error) {
 	timelineRepo := memory.NewTimelineRepo()
 	passwordHasher := memory.NewPasswordHasher(10)
 	authSvc, err := memory.NewAuthService(cfg.AccessTokenSecret, cfg.RefreshTokenSecret)
+
+	// --- Event Bus (memory or Kafka) ---
+	eventBus := memory.NewEventBus()
+
+	// --- Search Engine (memory or Elasticsearch) ---
+	var searchEngine port.SearchEngine
+	if cfg.ElasticsearchURL != "" {
+		se, err := es.NewSearchEngine([]string{cfg.ElasticsearchURL})
+		if err != nil {
+			return nil, err
+		}
+		searchEngine = se
+	} else {
+		searchEngine = memory.NewSearchEngine()
+	}
+
+	// --- Notifications ---
+	notifRepo := memory.NewNotificationRepo()
 	if err != nil {
 		return nil, err
 	}
-
-	// --- Use Cases ---
 	registerUC := usecaseUser.NewRegisterUseCase(userRepo, passwordHasher, authSvc)
 	loginUC := usecaseUser.NewLoginUseCase(userRepo, passwordHasher, authSvc)
 	getProfileUC := usecaseUser.NewGetProfileUseCase(userRepo)
@@ -102,11 +121,21 @@ func New(cfg *config.Config) (*App, error) {
 	fanOutUC := usecaseTL.NewFanOutUseCase(timelineRepo, followRepo)
 	homeTimelineUC := usecaseTL.NewGetHomeTimelineUseCase(timelineRepo)
 
+	searchTweetUC := usecaseSearch.NewSearchTweetsUseCase(searchEngine)
+	notifListUC := usecaseNotif.NewListUseCase(notifRepo)
+	notifCountUC := usecaseNotif.NewCountUnreadUseCase(notifRepo)
+	notifMarkReadUC := usecaseNotif.NewMarkReadUseCase(notifRepo)
+
 	// --- Transport ---
 	authHandler := transport.NewAuthHandler(registerUC, loginUC)
 	userHandler := transport.NewUserHandler(getProfileUC)
-	tweetHandler := transport.NewTweetHandler(createTweetUC, getTweetUC, listTweetsUC, deleteTweetUC, fanOutUC)
+	tweetHandler := transport.NewTweetHandler(createTweetUC, getTweetUC, listTweetsUC, deleteTweetUC, fanOutUC, searchEngine)
 	followHandler := transport.NewFollowHandler(followUC, unfollowUC, listFollowersUC, listFollowingUC)
+	searchHandler := transport.NewSearchHandler(searchTweetUC)
+	notifHandler := transport.NewNotificationHandler(notifListUC, notifCountUC, notifMarkReadUC)
+
+	// --- Event Subscribers ---
+	transport.SetupNotificationSubscribers(eventBus, notifRepo)
 
 	// --- Middleware ---
 	authGuard := appmw.NewAuthGuard(authSvc)
@@ -128,6 +157,7 @@ func New(cfg *config.Config) (*App, error) {
 			r.Post("/login", authHandler.Login)
 		})
 		r.Get("/tweets/{id}", tweetHandler.Get)
+		r.Get("/tweets/search", searchHandler.Search)
 		r.Get("/users/{id}/tweets", tweetHandler.ListByUser)
 		r.Get("/users/{id}/followers", followHandler.Followers)
 		r.Get("/users/{id}/following", followHandler.Following)
@@ -145,8 +175,10 @@ func New(cfg *config.Config) (*App, error) {
 			r.Delete("/tweets/{id}", tweetHandler.Delete)
 			r.Post("/users/{id}/follow", followHandler.Follow)
 			r.Delete("/users/{id}/follow", followHandler.Unfollow)
-			r.Post("/tweets/{id}/like", likeHandler(likeUC))
+			r.Post("/tweets/{id}/like", likeHandler(likeUC, tweetRepo, eventBus))
 			r.Delete("/tweets/{id}/like", unlikeHandler(unlikeUC))
+			r.Get("/notifications", notifHandler.List)
+			r.Post("/notifications/{id}/read", notifHandler.MarkRead)
 		})
 	})
 
@@ -204,13 +236,25 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 	api.RespondOK(w, map[string]string{"message": "hello world"})
 }
 
-func likeHandler(uc *usecaseTweet.LikeUseCase) http.HandlerFunc {
+func likeHandler(uc *usecaseTweet.LikeUseCase, tweetRepo port.TweetRepository, bus port.EventBus) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, _ := appmw.UserIDFromContext(r.Context())
 		id := chi.URLParam(r, "id")
 		if err := uc.Execute(r.Context(), userID, id); err != nil {
 			api.InternalError(w, "internal server error")
 			return
+		}
+		// Publish event for notifications
+		t, _ := tweetRepo.GetByID(r.Context(), id)
+		if t != nil {
+			bus.Publish(r.Context(), "tweet.liked", port.Event{
+				Type: "tweet.liked",
+				Data: map[string]string{
+					"tweet_id":        id,
+					"actor_id":        userID,
+					"tweet_author_id": t.AuthorID,
+				},
+			})
 		}
 		api.RespondNoContent(w)
 	}
