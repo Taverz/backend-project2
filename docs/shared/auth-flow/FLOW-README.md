@@ -13,7 +13,8 @@ docs/shared/auth-flow/
 ├── 04-PATTERNS.md          ← cross-platform patterns (для AI, без кода)
 ├── 05-VERIFICATION.md      ← тесты + curl + таблица сценариев
 ├── 06-UI-STATES.md         ← все UI-состояния каждого экрана (таблицы)
-└── 07-TEST-CASES.md        ← тест-кейсы без кода (precondition → step → result)
+├── 07-TEST-CASES.md        ← тест-кейсы без кода (precondition → step → result)
+└── 08-BEHAVIOR.md          ← логика работы каждого экрана (человек → утверждает → AI реализует)
 ```
 
 ## Как читать

@@ -129,6 +129,7 @@ Traces (пример)
 | [`docs/shared/auth-flow/05-VERIFICATION.md`](docs/shared/auth-flow/05-VERIFICATION.md) | Шаг 5: тесты + curl + таблица сценариев |
 | [`docs/shared/auth-flow/06-UI-STATES.md`](docs/shared/auth-flow/06-UI-STATES.md) | Все UI-состояния экранов: Login (9), Register (12), Splash (5), AuthGuard (5) |
 | [`docs/shared/auth-flow/07-TEST-CASES.md`](docs/shared/auth-flow/07-TEST-CASES.md) | 20 тест-кейсов без кода: регистрация, логин, refresh, guard, logout |
+| [`docs/shared/auth-flow/08-BEHAVIOR.md`](docs/shared/auth-flow/08-BEHAVIOR.md) | Логика работы экранов: пошаговое описание User→System для Login, Register, AuthGuard, Splash, Refresh, Logout |
 
 ### Frontend (Flutter)
 
