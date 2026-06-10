@@ -105,6 +105,16 @@ Traces (пример)
 | [`docs/scripts/replay.sh`](docs/scripts/replay.sh) | Воспроизведение сессии |
 | [`docs/scripts/generate-traces.py`](docs/scripts/generate-traces.py) | Генерация трасс из JSONL |
 
+### Flow разработки с AI
+
+| Файл | Описание |
+|------|----------|
+| [`docs/examples/media-upload/FLOW-README.md`](docs/examples/media-upload/FLOW-README.md) | Описание flow: бизнес-требования → SPEC → код → верификация |
+| [`docs/examples/media-upload/01-REQUIREMENTS.md`](docs/examples/media-upload/01-REQUIREMENTS.md) | Шаг 1: требования (пишет человек, 3–10 строк) |
+| [`docs/examples/media-upload/02-SPEC.md`](docs/examples/media-upload/02-SPEC.md) | Шаг 2: AI генерирует техзадание из требований |
+| [`docs/examples/media-upload/03-CODE.md`](docs/examples/media-upload/03-CODE.md) | Шаг 3: AI пишет код модулями, каждый проверяется |
+| [`docs/examples/media-upload/04-VERIFICATION.md`](docs/examples/media-upload/04-VERIFICATION.md) | Шаг 4: тесты и curl — единственная честная верификация |
+
 ### Прочее
 
 | Файл | Описание |
