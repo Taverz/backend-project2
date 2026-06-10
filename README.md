@@ -121,6 +121,18 @@ Traces (пример)
 | [`docs/examples/media-upload/03-CODE.md`](docs/examples/media-upload/03-CODE.md) | Шаг 3: AI пишет код модулями, каждый проверяется |
 | [`docs/examples/media-upload/04-VERIFICATION.md`](docs/examples/media-upload/04-VERIFICATION.md) | Шаг 4: тесты и curl — единственная честная верификация |
 
+### Shared Docs (for all platforms)
+
+| Файл | Описание |
+|------|----------|
+| [`docs/shared/SOUL.md`](docs/shared/SOUL.md) | Идентичность, архитектурные решения, список платформ |
+| [`docs/shared/API.md`](docs/shared/API.md) | Контракт backend↔клиенты: все эндпоинты, request/response |
+| [`docs/shared/FEATURES.md`](docs/shared/FEATURES.md) | Каждая фича + acceptance criteria |
+| [`docs/shared/SCREENS.md`](docs/shared/SCREENS.md) | Экранная карта, состояния (loading/empty/error/data) |
+| [`docs/shared/DESIGN-SYSTEM.md`](docs/shared/DESIGN-SYSTEM.md) | Цвета, шрифты, компоненты, иконки |
+| [`docs/shared/ERRORS.md`](docs/shared/ERRORS.md) | Все ошибки и реакция клиента |
+| [`docs/shared/DESIGN-CONTRACT.md`](docs/shared/DESIGN-CONTRACT.md) | Контракт между Figma и кодом: naming, экспорт, состояния |
+
 ### Multi-Platform
 
 | Файл | Описание |
