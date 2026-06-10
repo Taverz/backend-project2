@@ -159,6 +159,7 @@ Traces (пример)
 | [`docs/shared/DESIGN-CONTRACT.md`](docs/shared/DESIGN-CONTRACT.md) | Контракт между Figma и кодом: naming, экспорт, состояния |
 | [`docs/shared/WIDGET-STATES.md`](docs/shared/WIDGET-STATES.md) | Состояния компонентов: Button (6), InputField (7), TweetCard (7), Avatar (4), FollowButton (4) |
 | [`docs/CRITIQUE.md`](docs/CRITIQUE.md) | Критический анализ документации: что пропущено, что улучшить |
+| [`docs/WHY-AI-FAILS.md`](docs/WHY-AI-FAILS.md) | 10 причин ошибок AI и какие документы их исправляют |
 
 ### Multi-Platform
 
