@@ -2,106 +2,61 @@
 
 Проверяет Flutter-код на соответствие архитектурным правилам Chirp.
 
-## Что проверять
+## Контекст
 
-Запусти последовательно каждую проверку и выведи нарушения с указанием файла и строки.
-
-### 1. Чистота domain/
-
-```bash
-grep -rn "package:dio" lib/features/*/domain/ 2>/dev/null
-grep -rn "package:flutter" lib/features/*/domain/ 2>/dev/null
-grep -rn "Dto" lib/features/*/domain/ 2>/dev/null
-grep -rn "Map<String, dynamic>" lib/features/*/domain/ 2>/dev/null
-```
-
-Нарушение если что-то найдено. `domain/` — чистый Dart без Flutter/Dio/DTO.
-
-### 2. DTO не выходит из data/
-
-```bash
-grep -rn "Dto" lib/features/*/presentation/ 2>/dev/null
-grep -rn "Dto" lib/features/*/domain/ 2>/dev/null
-```
-
-### 3. Нет cross-feature импортов из data/
-
-```bash
-# Ищем импорты вида features/X/data/ из features/Y/
-grep -rn "features/.*/data/" lib/features/ 2>/dev/null | grep -v "^lib/features/\([^/]*\)/.*features/\1/"
-```
-
-Разрешено импортировать только `features/x/domain/` из другой фичи.
-
-### 4. Bloc не слушает другой Bloc
-
-```bash
-grep -rn "\.stream\.listen" lib/features/*/presentation/bloc/ 2>/dev/null
-grep -rn "\.stream\.listen" lib/features/*/presentation/cubit/ 2>/dev/null
-```
-
-### 5. BuildContext не попадает в Bloc/Usecase/Repository
-
-```bash
-grep -rn "BuildContext" lib/features/*/domain/ 2>/dev/null
-grep -rn "BuildContext" lib/features/*/data/ 2>/dev/null
-grep -rn "BuildContext" lib/features/*/presentation/bloc/ 2>/dev/null
-grep -rn "context\.go\|context\.push\|showDialog" lib/features/*/presentation/bloc/ 2>/dev/null
-grep -rn "context\.go\|context\.push\|showDialog" lib/features/*/presentation/cubit/ 2>/dev/null
-```
-
-### 6. Пагинация через PaginatedBloc
-
-```bash
-# Ищем Bloc'и со своей cursor-логикой (cursor без PaginatedBloc)
-grep -rn "cursor" lib/features/*/presentation/bloc/ 2>/dev/null | grep -v "PaginatedBloc\|paginated_bloc"
-```
-
-### 7. UseCase не пустой проброс
-
-```bash
-grep -rn "call\|execute" lib/features/*/domain/usecases/ 2>/dev/null
-```
-
-Вручную проверь, что usecase содержит оркестрацию (2+ репозитория, откат, валидация), а не просто `return repo.method()`.
-
-### 8. RepositoryImpl возвращает Result, не бросает
-
-```bash
-grep -rn "throw\|rethrow" lib/features/*/data/repositories/ 2>/dev/null
-```
-
-### 9. Нейминг файлов
-
-```bash
-# Все файлы должны быть snake_case.dart
-find lib/features/ -name "*.dart" | grep -v "^[a-z0-9_/]*\.dart$" 2>/dev/null
-```
-
-### 10. Глобальные синглтоны / GetIt
-
-```bash
-grep -rn "GetIt\|get_it\|singleton\|instance\b" lib/ 2>/dev/null | grep -v "test\|CLAUDE\|\.md"
-```
-
-## Отчёт
-
-После проверки выведи:
-
-```
-## Результаты архитектурного ревью
-
-### ✅ Проверено без нарушений
-- ...
-
-### ⚠️ Нарушения
-- [файл:строка] описание нарушения → как исправить
-
-### ℹ️ Требует ручной проверки
-- UseCase'ы (убедись, что есть оркестрация)
-- WM (убедись, что нет бизнес-логики)
-```
+Правила описаны в `docs/flutter/ARCHITECTURE_RULES.md`. Анти-паттерны — там же, §7.
 
 ## Цель проверки
 
 $ARGUMENTS
+
+## Автоматические проверки
+
+Выполни последовательно:
+
+```bash
+# 1. domain/ не содержит Flutter/Dio/DTO
+grep -rn "package:dio\|package:flutter\|Dto\|Map<String, dynamic>" flutter/lib/features/*/domain/ 2>/dev/null
+
+# 2. DTO не выходит из data/
+grep -rn "Dto" flutter/lib/features/*/presentation/ flutter/lib/features/*/domain/ 2>/dev/null
+
+# 3. Нет cross-feature импортов из data/
+grep -rn "features/.*/data/" flutter/lib/features/ 2>/dev/null
+
+# 4. Bloc не слушает Bloc
+grep -rn "\.stream\.listen" flutter/lib/features/*/presentation/bloc/ flutter/lib/features/*/presentation/cubit/ 2>/dev/null
+
+# 5. BuildContext/навигация не в Bloc
+grep -rn "BuildContext\|context\.go\|context\.push\|showDialog" flutter/lib/features/*/presentation/bloc/ flutter/lib/features/*/domain/ flutter/lib/features/*/data/ 2>/dev/null
+
+# 6. Нет своей cursor-пагинации без PaginatedBloc
+grep -rn "cursor" flutter/lib/features/*/presentation/bloc/ 2>/dev/null | grep -v "PaginatedBloc\|paginated_bloc\|extends\|super"
+
+# 7. RepositoryImpl не пробрасывает исключения
+grep -rn "^[[:space:]]*throw\|^[[:space:]]*rethrow" flutter/lib/features/*/data/repositories/ 2>/dev/null
+
+# 8. Нет GetIt / глобальных синглтонов
+grep -rn "GetIt\|\.instance\b\|static.*singleton" flutter/lib/ 2>/dev/null | grep -v "test\|\.md"
+```
+
+## Ручная проверка
+
+- UseCase'ы: есть ли оркестрация или это пустой проброс?
+- WM: нет ли бизнес-логики (условий на доменных данных)?
+- Каждый экран: есть ли все 4 состояния (Loading, Error+Retry, Empty, Data)?
+
+## Формат отчёта
+
+```
+## Результаты архитектурного ревью
+
+### ✅ Проверено — нарушений нет
+- ...
+
+### ⚠️ Нарушения
+- [путь/файл.dart:N] описание → как исправить
+
+### ℹ️ Требует ручной проверки
+- ...
+```

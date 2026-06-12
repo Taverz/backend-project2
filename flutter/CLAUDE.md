@@ -1,106 +1,52 @@
-# Chirp Flutter — CLAUDE.md
+# Chirp Flutter — Quick Context for AI Agents
 
-Мобильный и веб-клиент для Chirp (Twitter-клон). Бэкенд — Go в `../backend/`.
+Краткий контекст для AI-агентов. Полная документация — в `../docs/flutter/`.
 
-## Запуск
+---
 
-```bash
-flutter pub get
-flutter run                        # dev (эмулятор)
-flutter run --dart-define=API_URL=http://localhost:8080
-flutter test                       # все тесты
-flutter test test/core/            # только core
-```
+## Навигация по документам
 
-## Архитектура
+| Что нужно | Файл |
+|-----------|------|
+| Что уже реализовано, ключевые файлы | [`../docs/flutter/FOUNDATION.md`](../docs/flutter/FOUNDATION.md) |
+| Полная архитектура (стек, слои, паттерны) | [`../docs/flutter/STRUCTURE.md`](../docs/flutter/STRUCTURE.md) |
+| Правила кода, нейминг, анти-паттерны | [`../docs/flutter/ARCHITECTURE_RULES.md`](../docs/flutter/ARCHITECTURE_RULES.md) |
+| Как добавить новую фичу | [`../docs/flutter/HOW-TO-ADD-FEATURE.md`](../docs/flutter/HOW-TO-ADD-FEATURE.md) |
+| Тесты: что покрыто, паттерны | [`../docs/flutter/TESTING.md`](../docs/flutter/TESTING.md) |
+| Запуск, сборка, env vars | [`../docs/flutter/SETUP.md`](../docs/flutter/SETUP.md) |
 
-Подробная документация: `../docs/flutter/STRUCTURE.md` и `ARCHITECTURE_RULES.md`.
+---
 
-Кратко:
-- **Clean Architecture**: `domain/ ← data/`, `presentation/ → domain/`
-- **State**: `flutter_bloc` (Bloc/Cubit) + WM (Widget Model, координатор экрана)
-- **DI**: InheritedWidget-скоупы: `AppScope` → `FeatureScope` → `ScreenScope`
-- **Навигация**: `go_router` + `StatefulShellRoute.indexedStack`
-- **HTTP**: `dio` + цепь интерсепторов (Auth → Refresh → Error → Logger)
-- **Сессия**: `SessionController` в `core/session/` — единственный источник истины; не Bloc, не фича
-- **Кэш**: `TweetStore` / `UserStore` в `data/store/` фичи-владельца — глобальный нормализованный кэш
-- **Пагинация**: все списки наследуют `PaginatedBloc<T>`, своих реализаций нет
-
-## Структура lib/
+## Самое важное (не читая остальное)
 
 ```
 lib/
-├── main.dart                    # bootstrap: BlocObserver + AppScopeHolder + ChirpApp
-├── app/
-│   ├── chirp_app.dart           # MaterialApp.router + theme
-│   ├── di/app_scope.dart        # InheritedWidget с глобальными зависимостями
-│   ├── di/app_scope_holder.dart # создаёт Dio, Session, Router, PrefsStorage
-│   └── router/
-│       ├── app_router.dart      # GoRouter: StatefulShellRoute + redirect по сессии
-│       ├── routes.dart          # пути и имена маршрутов
-│       └── session_refresh_listenable.dart
-├── core/
-│   ├── network/                 # DioFactory + 4 интерсептора
-│   ├── session/                 # SessionController, SessionState, TokenStorage
-│   ├── error/                   # Failure (sealed) + исключения
-│   ├── result/                  # sealed Result<T>: Ok(value) | Err(failure)
-│   ├── bloc/                    # AppBlocObserver + PaginatedBloc<T>
-│   ├── wm/                      # BaseWm (контракт Widget Model)
-│   ├── storage/                 # PrefsStorage (shared_preferences обёртка)
-│   ├── theme/                   # AppTheme, AppColors, AppTypography
-│   └── utils/                   # DateTimeX, Validators, Debouncer
-├── features/                    # (пока пусто, фичи добавляются итеративно)
-└── shared/
-    ├── widgets/                 # Avatar, AppShell, Loading/Error/Empty/Skeleton, InfiniteScrollList
-    └── extensions/context_x.dart
+├── main.dart                        # bootstrap: BlocObserver + AppScopeHolder + ChirpApp
+├── app/di/app_scope.dart            # AppScope.of(context) — глобальные зависимости
+├── app/router/app_router.dart       # GoRouter + redirect по SessionState
+├── core/session/session_controller.dart   # сессия: init/update/drop
+├── core/result/result.dart          # sealed Result<T>: Ok / Err(Failure)
+├── core/bloc/paginated_bloc.dart    # база для ВСЕХ списков с cursor
+└── features/                        # пусто — фичи добавляются итеративно
 ```
 
-## Ключевые файлы
+## Команды
 
-| Файл | Роль |
-|------|------|
-| `core/result/result.dart` | `Result<T>` — возвращаемый тип репозиториев |
-| `core/error/failures.dart` | Иерархия `Failure` (Network/Server/Unauthorized/Validation/...) |
-| `core/session/session_controller.dart` | `init()` / `update()` / `drop()` — жизненный цикл сессии |
-| `core/bloc/paginated_bloc.dart` | База для всех списков с cursor |
-| `app/di/app_scope.dart` | `AppScope.of(context)` — точка доступа к глобальным зависимостям |
-| `app/router/app_router.dart` | GoRouter с redirect-логикой по SessionState |
-| `core/network/interceptors/refresh_interceptor.dart` | Single-flight refresh (Completer) |
+```bash
+flutter pub get && flutter run
+flutter test
+flutter run --dart-define=API_URL=http://localhost:8080
+```
 
-## Правила (кратко, полное — в ARCHITECTURE_RULES.md)
+## Добавить фичу
 
-1. `domain/` — чистый Dart: нет Flutter, нет Dio, нет dto
-2. Из других фич импортировать **только** `features/x/domain/`
+Читай `../docs/flutter/HOW-TO-ADD-FEATURE.md`. Порядок: `domain/ → data/ → presentation/ → подключение → тесты`.
+
+## Критические правила
+
+1. `domain/` — чистый Dart: нет Flutter, нет Dio, нет DTO
+2. Импорт из другой фичи — только `features/x/domain/`
 3. `RepositoryImpl` возвращает `Result<T>`, не бросает наружу
-4. Все списки с cursor — наследники `PaginatedBloc`, не своя реализация
-5. Bloc → репозиторий напрямую, если один вызов; `UseCase` — только при оркестрации
-6. WM — только при 2+ Bloc'ах или локальном UI-стейте; бизнес-логики в WM нет
-7. Навигация в Bloc'е запрещена; Bloc эмитит состояние, экран реагирует
-8. Без кодогенерации: equality → `equatable`, json → руками
-
-## Тесты
-
-```
-test/
-├── core/
-│   ├── session/session_controller_test.dart   # init/update/drop, stream, listenable
-│   ├── bloc/paginated_bloc_test.dart           # load, loadMore, doubleLoadMore, refresh, error
-│   └── network/error_interceptor_test.dart    # 401/404/500/connection/timeout/message
-└── features/<feature>/{domain,data,presentation}/
-```
-
-Запуск: `flutter test` (все) или `flutter test test/core/` (только core).
-
-## Как добавить новую фичу
-
-Используй скил `/flutter-feature <название>`.
-
-## API_URL
-
-Бэкенд запускается на `http://localhost:8080` по умолчанию.  
-Переопределить: `flutter run --dart-define=API_URL=http://192.168.1.x:8080`
-
-## Кодоген
-
-**Не используется**: нет `freezed`, `json_serializable`, `build_runner`.  
-Модели пишутся руками с `equatable`.
+4. Пагинация — только через `PaginatedBloc<T>`, не своя
+5. UseCase — только при оркестрации 2+ репозиториев или оптимистичных апдейтах
+6. Навигация (`context.go`) — только в обработчиках экрана/WM, не в Bloc
