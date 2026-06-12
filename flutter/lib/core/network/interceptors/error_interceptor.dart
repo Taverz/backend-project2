@@ -32,7 +32,8 @@ class ErrorInterceptor extends Interceptor {
         return;
       }
       final body = err.response?.data;
-      final message = (body is Map ? body['error'] as String? : null) ??
+      final message =
+          (body is Map ? body['error'] as String? : null) ??
           err.response?.statusMessage ??
           'Server error';
       handler.reject(

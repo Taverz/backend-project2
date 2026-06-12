@@ -13,8 +13,10 @@ final class NetworkFailure extends Failure {
 }
 
 final class ServerFailure extends Failure {
-  const ServerFailure({required this.statusCode, String message = 'Ошибка сервера'})
-      : super(message);
+  const ServerFailure({
+    required this.statusCode,
+    String message = 'Ошибка сервера',
+  }) : super(message);
   final int statusCode;
 
   @override

@@ -9,7 +9,10 @@ class _CapturingHandler extends ErrorInterceptorHandler {
   DioException? nexted;
 
   @override
-  void reject(DioException error, {bool callFollowingErrorInterceptor = false}) {
+  void reject(
+    DioException error, {
+    bool callFollowingErrorInterceptor = false,
+  }) {
     rejected = error;
   }
 
@@ -19,7 +22,7 @@ class _CapturingHandler extends ErrorInterceptorHandler {
   }
 
   @override
-  void resolve(Response response) {}
+  void resolve(Response<Object?> response) {}
 }
 
 DioException _makeError({
@@ -90,12 +93,27 @@ void main() {
     expect(err.message, 'validation failed');
   });
 
-  test('неизвестный тип ошибки передаётся дальше через next()', () {
+  test('sendTimeout → NetworkException', () {
     final handler = _CapturingHandler();
     interceptor.onError(
-      _makeError(type: DioExceptionType.cancel),
+      _makeError(type: DioExceptionType.sendTimeout),
       handler,
     );
+    expect(handler.rejected?.error, isA<NetworkException>());
+  });
+
+  test('connectionTimeout → NetworkException', () {
+    final handler = _CapturingHandler();
+    interceptor.onError(
+      _makeError(type: DioExceptionType.connectionTimeout),
+      handler,
+    );
+    expect(handler.rejected?.error, isA<NetworkException>());
+  });
+
+  test('неизвестный тип ошибки передаётся дальше через next()', () {
+    final handler = _CapturingHandler();
+    interceptor.onError(_makeError(type: DioExceptionType.cancel), handler);
     expect(handler.nexted, isNotNull);
     expect(handler.rejected, isNull);
   });

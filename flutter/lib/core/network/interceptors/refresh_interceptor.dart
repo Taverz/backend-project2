@@ -16,6 +16,7 @@ class RefreshInterceptor extends Interceptor {
   Completer<bool>? _refreshCompleter;
 
   @override
+  // ignore: avoid_void_async — переопределяет Interceptor.onError (void обязателен)
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.error is! UnauthorizedException) {
       handler.next(err);
@@ -36,8 +37,13 @@ class RefreshInterceptor extends Interceptor {
     }
 
     // Повторяем исходный запрос с новым токеном.
+    // Читаем состояние заново — оно могло измениться пока шёл refresh.
     try {
-      final s = session.state as SessionAuthenticated;
+      final s = session.state;
+      if (s is! SessionAuthenticated) {
+        handler.next(err);
+        return;
+      }
       final opts = err.requestOptions;
       opts.headers['Authorization'] = 'Bearer ${s.accessToken}';
       final response = await dio.fetch(opts);

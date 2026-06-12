@@ -5,19 +5,17 @@ import 'package:flutter/widgets.dart';
 /// WM = координатор экрана: держит Bloc'и, ValueNotifier'ы, подписки.
 /// Бизнес-логики нет — только координация UI-стейта.
 abstract class BaseWm {
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
+
   @mustCallSuper
   void init() {}
 
+  /// Добавь подписки через этот метод — они закроются автоматически в dispose.
+  void addSubscription(StreamSubscription<dynamic> sub) =>
+      _subscriptions.add(sub);
+
   @mustCallSuper
-  void dispose() {}
-
-  /// Добавь подписки в [_subscriptions], они закроются в dispose.
-  final List<StreamSubscription<dynamic>> _subscriptions = [];
-
-  void addSubscription(StreamSubscription<dynamic> sub) => _subscriptions.add(sub);
-
-  @protected
-  void disposeSubscriptions() {
+  void dispose() {
     for (final s in _subscriptions) {
       s.cancel();
     }

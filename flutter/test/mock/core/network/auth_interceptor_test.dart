@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:chirp/core/network/interceptors/auth_interceptor.dart';
 import 'package:chirp/core/session/session_controller.dart';
-import 'package:chirp/core/session/session_state.dart';
 import 'package:chirp/core/session/token_storage.dart';
 
 class MockTokenStorage extends Mock implements TokenStorage {}
@@ -31,16 +30,18 @@ void main() {
 
   tearDown(() => session.dispose());
 
-  Future<void> _authenticate() async {
-    when(() => storage.write(
-          access: any(named: 'access'),
-          refresh: any(named: 'refresh'),
-        )).thenAnswer((_) async {});
+  Future<void> authenticate() async {
+    when(
+      () => storage.write(
+        access: any(named: 'access'),
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async {});
     await session.update(accessToken: 'token_abc', refreshToken: 'ref_xyz');
   }
 
   test('добавляет заголовок Authorization когда пользователь вошёл', () async {
-    await _authenticate();
+    await authenticate();
 
     final opts = RequestOptions(path: '/test');
     final handler = _CapturingRequestHandler();
@@ -55,7 +56,13 @@ void main() {
     final handler = _CapturingRequestHandler();
     interceptor.onRequest(opts, handler);
 
-    expect(handler.captured?.headers['Authorization'], isNull);
+    // handler.captured != null означает что handler.next() был вызван корректно.
+    expect(
+      handler.captured,
+      isNotNull,
+      reason: 'handler.next() должен быть вызван',
+    );
+    expect(handler.captured!.headers['Authorization'], isNull);
   });
 
   test('не добавляет заголовок в состоянии Unauthenticated', () async {
@@ -66,16 +73,23 @@ void main() {
     final handler = _CapturingRequestHandler();
     interceptor.onRequest(opts, handler);
 
-    expect(handler.captured?.headers['Authorization'], isNull);
+    expect(
+      handler.captured,
+      isNotNull,
+      reason: 'handler.next() должен быть вызван',
+    );
+    expect(handler.captured!.headers['Authorization'], isNull);
   });
 
   test('обновляет заголовок при смене токена', () async {
-    await _authenticate(); // token_abc
+    await authenticate(); // token_abc
 
-    when(() => storage.write(
-          access: any(named: 'access'),
-          refresh: any(named: 'refresh'),
-        )).thenAnswer((_) async {});
+    when(
+      () => storage.write(
+        access: any(named: 'access'),
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async {});
     await session.update(accessToken: 'new_token', refreshToken: 'new_ref');
 
     final opts = RequestOptions(path: '/test');
@@ -86,12 +100,9 @@ void main() {
   });
 
   test('не модифицирует другие заголовки', () async {
-    await _authenticate();
+    await authenticate();
 
-    final opts = RequestOptions(
-      path: '/test',
-      headers: {'X-Custom': 'value'},
-    );
+    final opts = RequestOptions(path: '/test', headers: {'X-Custom': 'value'});
     final handler = _CapturingRequestHandler();
     interceptor.onRequest(opts, handler);
 

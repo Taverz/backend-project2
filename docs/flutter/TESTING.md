@@ -8,7 +8,8 @@
 
 ```bash
 flutter test                          # всё
-flutter test test/core/               # только инфраструктура
+flutter test test/unit/               # только unit + widget тесты (без моков)
+flutter test test/mock/               # только mock-тесты (mocktail)
 flutter test test/features/<name>/    # конкретная фича
 flutter test --coverage               # с lcov-отчётом
 ```
@@ -17,88 +18,112 @@ flutter test --coverage               # с lcov-отчётом
 
 ## Структура test/
 
+Тесты делятся на два типа по наличию моков:
+
 ```
 test/
-├── core/
-│   ├── session/
-│   │   └── session_controller_test.dart
-│   ├── bloc/
-│   │   └── paginated_bloc_test.dart
-│   └── network/
-│       └── error_interceptor_test.dart
-└── features/
+├── unit/                            # чистые тесты — без моков, без реальных зависимостей
+│   ├── core/
+│   │   ├── bloc/paginated_bloc_test.dart
+│   │   ├── error/failures_test.dart
+│   │   ├── network/error_interceptor_test.dart
+│   │   ├── result/result_test.dart
+│   │   └── utils/
+│   │       ├── date_format_test.dart
+│   │       ├── debouncer_test.dart
+│   │       └── validators_test.dart
+│   └── shared/
+│       └── widgets/                 # widget-тесты (testWidgets, без моков)
+│           ├── error_view_test.dart
+│           ├── empty_view_test.dart
+│           └── infinite_scroll_list_test.dart
+├── mock/                            # тесты с mocktail-моками
+│   └── core/
+│       ├── network/
+│       │   ├── auth_interceptor_test.dart
+│       │   └── refresh_interceptor_test.dart
+│       └── session/
+│           └── session_controller_test.dart
+└── features/                        # добавляются вместе с фичами
     └── <feature>/
-        ├── domain/          # если есть доменная логика (редко)
-        ├── data/
+        ├── unit/
         │   ├── <name>_mapper_test.dart
-        │   └── <name>_repository_test.dart
-        └── presentation/
-            └── <name>_bloc_test.dart
+        │   └── <name>_bloc_test.dart
+        └── mock/
+            └── <name>_repository_test.dart
 ```
 
-Тесты зеркалят `lib/` — тот же путь, суффикс `_test.dart`.
+### Критерий разделения
+
+| Папка | Содержит | Использует |
+|-------|---------|-----------|
+| `unit/` | чистые Dart-тесты и widget-тесты | `flutter_test`, `bloc_test` |
+| `mock/` | тесты с мок-зависимостями | `mocktail`, `flutter_test` |
 
 ---
 
-## Текущее покрытие (core)
+## Текущее покрытие
 
-### session_controller_test.dart — 5 тестов
+### unit/core/ — 42 теста
 
-| Тест | Что проверяет |
-|------|--------------|
-| `init — токены есть` | `SessionAuthenticated` с правильным токеном |
-| `init — токенов нет` | `SessionUnauthenticated` |
-| `update` | сохраняет в storage, переходит в `Authenticated` |
-| `drop` | очищает storage, переходит в `Unauthenticated` |
-| `listenable` | `ValueNotifier` обновляется синхронно |
-| `stream` | `stream.take(3).toList()` получает 3 перехода: init→update→drop |
+| Файл | Тестов | Что проверяет |
+|------|--------|--------------|
+| `result_test.dart` | 11 | `Ok`/`Err`, `isOk/isErr`, `fold`, `valueOrThrow`, типобезопасность |
+| `failures_test.dart` | 10 | equality (equatable), sealed hierarchy, exhaustive switch |
+| `error_interceptor_test.dart` | 9 | 401/404/500/connection/receive/send/connectionTimeout/message/unknown |
+| `paginated_bloc_test.dart` | 7 | load, loadMore, droppable, error+isLoading, refresh+failure clear, noMore, LoadMore guard |
+| `validators_test.dart` | 13 | email/password/username — валидные, невалидные, границы |
+| `date_format_test.dart` | 11 | секунды/минуты/часы/дни, все 7 граничных значений |
+| `debouncer_test.dart` | 5 | delay, cancel, dispose, sequential calls |
 
-Мок: `MockTokenStorage extends Mock implements TokenStorage` (mocktail).
+### unit/shared/widgets/ — 16 тестов
 
-**Паттерн stream-теста** — важно начинать слушать ДО триггера действий:
+| Файл | Тестов | Что проверяет |
+|------|--------|--------------|
+| `error_view_test.dart` | 6 | message, иконка, retry button, tap, center |
+| `empty_view_test.dart` | 4 | message, default/custom icon, center |
+| `infinite_scroll_list_test.dart` | 6 | render, loading indicator, empty, hasMore guard, isLoadingMore guard, **позитивный триггер** |
+
+### mock/core/ — 18 тестов
+
+| Файл | Тестов | Что проверяет |
+|------|--------|--------------|
+| `session_controller_test.dart` | 6 | init/update/drop + stream + listenable |
+| `auth_interceptor_test.dart` | 5 | Bearer header: Unknown/Unauth/Auth, update, не трогает чужие заголовки |
+| `refresh_interceptor_test.dart` | 7 | non-401 passthrough, self-refresh drop, успешный retry, failed drop, unauth session, **single-flight concurrent**, повтор после завершения |
+
+**Итого: 76 тестов** (`test/unit/` + `test/mock/`)
+
+---
+
+## Ключевые паттерны
+
+### Mock с mocktail (test/mock/)
+
 ```dart
+class MockTokenStorage extends Mock implements TokenStorage {}
+
+setUp(() {
+  storage = MockTokenStorage();
+  when(() => storage.read()).thenAnswer((_) async => null);
+});
+
+verify(() => storage.clear()).called(1);
+```
+
+### Stream-тест: подписка до действий
+
+```dart
+// Правильно: Future создаётся ДО того как события эмитятся
 final eventsFuture = controller.stream.take(3).toList();
 await controller.init();
-await controller.update(...);
+await controller.update(accessToken: 'a', refreshToken: 'r');
 await controller.drop();
 final states = await eventsFuture;
 ```
 
-### paginated_bloc_test.dart — 6 тестов
+### Capturing handler для interceptors (без запуска Dio pipeline)
 
-| Тест | Что проверяет |
-|------|--------------|
-| `Requested` | isLoading → items + cursor + hasMore |
-| `LoadMore` | добавляет к существующему списку |
-| `двойной LoadMore` | droppable: второй игнорируется пока идёт первый |
-| `Failure` | `hasError == true`, `failure == NetworkFailure` |
-| `Refresh` | сбрасывает items, загружает заново с cursor = null |
-| `nextCursor == null` | `hasMore == false` |
-
-Конкретный Bloc для тестов:
-```dart
-class _TestBloc extends PaginatedBloc<String> {
-  _TestBloc(this._fetcher);
-  final PageResult<String> Function(String?) _fetcher;
-
-  @override
-  PageResult<String> fetchPage(String? cursor) => _fetcher(cursor);
-}
-```
-
-### error_interceptor_test.dart — 7 тестов
-
-| Тест | Что проверяет |
-|------|--------------|
-| `401` | → `UnauthorizedException` |
-| `404` | → `ApiException(statusCode: 404)` |
-| `500` | → `ApiException(statusCode: 500)` |
-| `connectionError` | → `NetworkException` |
-| `receiveTimeout` | → `NetworkException` |
-| `тело с полем error` | message берётся из `body['error']` |
-| `cancel` | пропускается через `next()`, не `reject()` |
-
-**Паттерн прямого тестирования interceptor** — без запуска Dio pipeline:
 ```dart
 class _CapturingHandler extends ErrorInterceptorHandler {
   DioException? rejected;
@@ -107,9 +132,6 @@ class _CapturingHandler extends ErrorInterceptorHandler {
   void reject(DioException error, {bool callFollowingErrorInterceptor = false}) {
     rejected = error;
   }
-
-  @override
-  void next(DioException err) { ... }
 }
 
 test('401 → UnauthorizedException', () {
@@ -119,37 +141,46 @@ test('401 → UnauthorizedException', () {
 });
 ```
 
-Прямой вызов `onError()` лучше, чем тест через Dio pipeline: порядок обработки ошибок в цепи Dio зависит от версии и не является предметом нашего теста.
+### droppable-тест: ждать завершения фетча внутри act
+
+```dart
+act: (bloc) async {
+  bloc.add(const PaginatedRequested());
+  await Future.delayed(const Duration(milliseconds: 20));
+  bloc.add(const PaginatedLoadMoreRequested());
+  bloc.add(const PaginatedLoadMoreRequested()); // dropped
+  // Ждём завершения фетча — иначе blocTest закончит сбор стейтов раньше
+  await Future.delayed(const Duration(milliseconds: 200));
+},
+```
 
 ---
 
 ## Обязательные тесты для каждой фичи
 
-Минимум при добавлении новой фичи:
+```
+test/features/<name>/
+├── unit/
+│   ├── <name>_mapper_test.dart      # dto → entity на реальном JSON-фикстуре
+│   └── <name>_bloc_test.dart        # happy path + failure + edge
+└── mock/
+    └── <name>_repository_test.dart  # Ok + Err(NetworkFailure) + Err(NotFoundFailure)
+```
 
-### data/mapper_test.dart
+### Mapper — пример
 
 ```dart
 test('fromDto создаёт корректный entity из реального JSON', () {
-  final dto = TweetDto.fromJson(jsonDecode(kTweetJson));
+  final dto = TweetDto.fromJson(jsonDecode(kTweetJson)); // реальный JSON из Swagger
   final entity = TweetMapper.fromDto(dto);
   expect(entity.id, '123');
   expect(entity.body, 'Hello world');
-  // ...
 });
 ```
 
-Использовать реальный JSON-пример из Swagger, не выдуманный. Это страхует от рассинхронизации с бэкендом.
-
-### data/repository_test.dart
+### Repository — пример
 
 ```dart
-test('возвращает Ok<Tweet> при успехе datasource', () async {
-  when(() => mockDataSource.getTweet('123')).thenAnswer((_) async => tweetDto);
-  final result = await repository.getById('123');
-  expect(result, isA<Ok<Tweet>>());
-});
-
 test('возвращает Err<NetworkFailure> при NetworkException', () async {
   when(() => mockDataSource.getTweet('123')).thenThrow(const NetworkException());
   final result = await repository.getById('123');
@@ -158,60 +189,10 @@ test('возвращает Err<NetworkFailure> при NetworkException', () asyn
 });
 ```
 
-### presentation/bloc_test.dart
-
-```dart
-blocTest<TimelineBloc, PaginatedState<TweetId>>(
-  'загружает timeline при Requested',
-  build: () => TimelineBloc(mockRepository),
-  act: (bloc) => bloc.add(const PaginatedRequested()),
-  expect: () => [
-    isA<PaginatedState<TweetId>>().having((s) => s.isLoading, 'loading', true),
-    isA<PaginatedState<TweetId>>().having((s) => s.items.length, 'items', greaterThan(0)),
-  ],
-);
-```
-
----
-
-## Инструменты
-
-| Пакет | Использование |
-|-------|--------------|
-| `flutter_test` | базовый тест-раннер |
-| `bloc_test` | `blocTest<Bloc, State>(build, act, expect)` |
-| `mocktail` | `class Mock extends Mock implements X` + `when(() => ...).thenAnswer(...)` |
-
-### Пример мока с mocktail
-
-```dart
-class MockTweetRepository extends Mock implements TweetRepository {}
-
-setUp(() {
-  mockRepo = MockTweetRepository();
-  // Для методов с named params нужно registerFallbackValue:
-  registerFallbackValue(const NetworkFailure());
-});
-
-when(() => mockRepo.getTimeline(cursor: any(named: 'cursor')))
-    .thenAnswer((_) async => const Ok((items: [], nextCursor: null)));
-```
-
 ---
 
 ## Чего не тестируем
 
-- Виджеты — только если есть сложная логика рендера (используй `testWidgets` + `WidgetTester`)
 - Простые getter'ы и константы
-- Код фреймворка (Dio, GoRouter, flutter_bloc) — они протестированы авторами
-
----
-
-## Запуск CI (будущее)
-
-```yaml
-# Пример GitHub Actions
-- run: flutter pub get
-- run: flutter analyze
-- run: flutter test --coverage
-```
+- Flutter/Dio/go_router framework-код
+- Код фреймворка внутри сторонних пакетов

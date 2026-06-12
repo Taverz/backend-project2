@@ -188,8 +188,9 @@ TimelineState
 
 Есть поток событий, конкуренция, transformers
 (пагинация, поиск с debounce/switchMap, long-polling)?
-  → Bloc. Использовать transformers (droppable для loadMore,
-    restartable для поиска), а не ручные флаги.
+  → Bloc. Использовать transformers из пакета `bloc_concurrency`
+    (droppable для loadMore, restartable для поиска), а не ручные флаги.
+    PaginatedBloc использует droppable() из bloc_concurrency автоматически.
 
 На экране 2+ Bloc/Cubit, которым нужна координация,
 или Bloc-стримы надо смешать с локальными ValueNotifier?

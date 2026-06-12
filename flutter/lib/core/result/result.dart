@@ -19,9 +19,9 @@ extension ResultX<T> on Result<T> {
   bool get isErr => this is Err<T>;
 
   T get valueOrThrow => switch (this) {
-        Ok(:final value) => value,
-        Err(:final failure) => throw failure,
-      };
+    Ok(:final value) => value,
+    Err(:final failure) => throw failure,
+  };
 
   R fold<R>(R Function(T value) onOk, R Function(Failure failure) onErr) =>
       switch (this) {

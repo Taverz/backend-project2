@@ -38,7 +38,8 @@ class _InfiniteScrollListState<T> extends State<InfiniteScrollList<T>> {
   }
 
   void _onScroll() {
-    if (_controller.position.pixels >= _controller.position.maxScrollExtent - 200) {
+    if (_controller.position.pixels >=
+        _controller.position.maxScrollExtent - 200) {
       if (widget.hasMore && !widget.isLoadingMore) {
         widget.onLoadMore();
       }

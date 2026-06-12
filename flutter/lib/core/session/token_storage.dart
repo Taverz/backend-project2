@@ -15,14 +15,15 @@ class TokenStorage {
     return (access: access, refresh: refresh);
   }
 
-  Future<void> write({required String access, required String refresh}) =>
-      Future.wait([
-        _storage.write(key: _accessKey, value: access),
-        _storage.write(key: _refreshKey, value: refresh),
-      ]);
+  // Пишем последовательно: если второй write упадёт, первый уже сохранён,
+  // но read() вернёт null (оба нужны), что лучше чем рассинхронизация.
+  Future<void> write({required String access, required String refresh}) async {
+    await _storage.write(key: _accessKey, value: access);
+    await _storage.write(key: _refreshKey, value: refresh);
+  }
 
-  Future<void> clear() => Future.wait([
-        _storage.delete(key: _accessKey),
-        _storage.delete(key: _refreshKey),
-      ]);
+  Future<void> clear() async {
+    await _storage.delete(key: _accessKey);
+    await _storage.delete(key: _refreshKey);
+  }
 }

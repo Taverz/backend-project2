@@ -57,20 +57,23 @@ void main() {
       expect(calls, 0); // не должен был вызваться
     });
 
-    test('множественные последовательные вызовы — только один срабатывает', () async {
-      final debouncer = Debouncer(duration: const Duration(milliseconds: 50));
-      int calls = 0;
+    test(
+      'множественные последовательные вызовы — только один срабатывает',
+      () async {
+        final debouncer = Debouncer(duration: const Duration(milliseconds: 50));
+        int calls = 0;
 
-      for (int i = 0; i < 10; i++) {
-        debouncer(() => calls++);
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
+        for (int i = 0; i < 10; i++) {
+          debouncer(() => calls++);
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      expect(calls, 1);
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        expect(calls, 1);
 
-      debouncer.dispose();
-    });
+        debouncer.dispose();
+      },
+    );
 
     test('можно вызвать снова после отработки', () async {
       final debouncer = Debouncer(duration: const Duration(milliseconds: 50));

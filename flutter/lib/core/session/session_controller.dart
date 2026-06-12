@@ -21,22 +21,29 @@ class SessionController {
   Future<void> init() async {
     final tokens = await _storage.read();
     if (tokens != null) {
-      _emit(SessionAuthenticated(
-        accessToken: tokens.access,
-        refreshToken: tokens.refresh,
-      ));
+      _emit(
+        SessionAuthenticated(
+          accessToken: tokens.access,
+          refreshToken: tokens.refresh,
+        ),
+      );
     } else {
       _emit(const SessionUnauthenticated());
     }
   }
 
   /// RefreshInterceptor или LoginUseCase вызывает после успешного получения токенов.
-  Future<void> update({required String accessToken, required String refreshToken}) async {
+  Future<void> update({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
     await _storage.write(access: accessToken, refresh: refreshToken);
-    _emit(SessionAuthenticated(
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    ));
+    _emit(
+      SessionAuthenticated(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      ),
+    );
   }
 
   /// LogoutUseCase или RefreshInterceptor при 401 вызывает этот метод.
@@ -47,7 +54,10 @@ class SessionController {
 
   void _emit(SessionState s) {
     _stateNotifier.value = s;
-    _stateController.add(s);
+    // Защита от вызова после dispose() (in-flight сетевые запросы).
+    if (!_stateController.isClosed) {
+      _stateController.add(s);
+    }
   }
 
   void dispose() {

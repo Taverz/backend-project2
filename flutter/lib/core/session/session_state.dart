@@ -9,7 +9,10 @@ final class SessionUnknown extends SessionState {
 
 /// Токены есть — пользователь вошёл.
 final class SessionAuthenticated extends SessionState {
-  const SessionAuthenticated({required this.accessToken, required this.refreshToken});
+  const SessionAuthenticated({
+    required this.accessToken,
+    required this.refreshToken,
+  });
   final String accessToken;
   final String refreshToken;
 }

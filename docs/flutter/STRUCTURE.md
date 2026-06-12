@@ -62,7 +62,7 @@ dev_dependencies:
 
 | Потребитель | Зачем |
 |-------------|-------|
-| `go_router.refreshListenable` | redirect на `/login` при разлогине — без участия Bloc |
+| `go_router.refreshListenable` | redirect на `/login` при разлогине — без участия Bloc. Реализовано через `SessionRefreshListenable`, подписывающийся на `session.stream` |
 | `RefreshInterceptor` (dio) | читает/обновляет токены, при провале refresh вызывает `session.drop()` |
 | `AuthBloc` (фича auth) | слушает сессию, чтобы отрисовывать UI логина; **не является** источником истины |
 
@@ -74,11 +74,16 @@ dev_dependencies:
 `RefreshInterceptor` держит один shared `Future<bool>` (Completer):
 
 ```
-401 пришёл → refresh уже идёт?
-  ├── да  → await тот же Future, потом retry
-  └── нет → стартуем refresh, все последующие 401 ждут его
-refresh упал → session.drop() → router сам уводит на /login
+401 пришёл (err.error is UnauthorizedException — выставляется ErrorInterceptor'ом)
+  ├── path == /auth/refresh → session.drop() → next(err)
+  └── иначе: refresh уже идёт?
+        ├── да  → await тот же Completer.future, потом retry
+        └── нет → стартуем refresh, все последующие 401 ждут его
+              refresh упал → session.drop() → router сам уводит на /login
+              refresh успешен → dio.fetch(originalRequest) → resolve
 ```
+
+**Важно:** `RefreshInterceptor` определяет 401 не по HTTP-статусу, а по типу `UnauthorizedException` в `err.error`. Этот тип выставляется `ErrorInterceptor`, который должен стоять в цепи ДО `RefreshInterceptor`. Порядок в `DioFactory`: `Logger → Error → Auth → Refresh`.
 
 Никаких конкурирующих refresh-запросов и затирания токенов.
 
@@ -151,7 +156,7 @@ features/tweet/data/store/tweet_store.dart
 
 | Scope | Живёт | Содержит | Кто создаёт/диспозит |
 |-------|-------|----------|----------------------|
-| `AppScope` | всё приложение | Dio, TokenStorage, SessionController, TweetStore, UserStore, репозитории-владельцы (tweet, profile), AppRouter | `AppScopeHolder` (StatefulWidget над MaterialApp) |
+| `AppScope` | всё приложение | Dio, SessionController, PrefsStorage, GoRouter — сейчас. TweetStore, UserStore, репозитории-владельцы — добавляются по мере реализации фич | `AppScopeHolder` (StatefulWidget над MaterialApp) |
 | `FeatureScope` | пока активна ветка/маршрут фичи | datasources фичи, её репозитории, usecase'ы, долгоживущие Bloc'и фичи (TimelineBloc) | `XxxScopeHolder` — обёртка builder'а ветки `StatefulShellRoute` или страницы |
 | `ScreenScope` (опционально) | один экран | WM экрана, эпизодические Cubit'ы (LikeCubit, форма) | `StatefulWidget` экрана |
 

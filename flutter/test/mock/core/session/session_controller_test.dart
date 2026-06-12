@@ -19,9 +19,9 @@ void main() {
 
   group('init', () {
     test('эмитит authenticated, когда токены есть в хранилище', () async {
-      when(() => storage.read()).thenAnswer(
-        (_) async => (access: 'acc', refresh: 'ref'),
-      );
+      when(
+        () => storage.read(),
+      ).thenAnswer((_) async => (access: 'acc', refresh: 'ref'));
 
       final states = <SessionState>[];
       controller.stream.listen(states.add);
@@ -43,12 +43,18 @@ void main() {
 
   group('update', () {
     test('сохраняет токены и переходит в authenticated', () async {
-      when(() => storage.write(access: any(named: 'access'), refresh: any(named: 'refresh')))
-          .thenAnswer((_) async {});
+      when(
+        () => storage.write(
+          access: any(named: 'access'),
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async {});
 
       await controller.update(accessToken: 'new_acc', refreshToken: 'new_ref');
 
-      verify(() => storage.write(access: 'new_acc', refresh: 'new_ref')).called(1);
+      verify(
+        () => storage.write(access: 'new_acc', refresh: 'new_ref'),
+      ).called(1);
       expect(controller.state, isA<SessionAuthenticated>());
       expect((controller.state as SessionAuthenticated).accessToken, 'new_acc');
     });
@@ -67,8 +73,12 @@ void main() {
 
   group('listenable', () {
     test('notifier обновляется синхронно при смене состояния', () async {
-      when(() => storage.write(access: any(named: 'access'), refresh: any(named: 'refresh')))
-          .thenAnswer((_) async {});
+      when(
+        () => storage.write(
+          access: any(named: 'access'),
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async {});
 
       final states = <SessionState>[];
       controller.listenable.addListener(() => states.add(controller.state));
@@ -83,16 +93,23 @@ void main() {
   group('stream', () {
     test('рассылает все переходы состояния подписчикам', () async {
       when(() => storage.read()).thenAnswer((_) async => null);
-      when(() => storage.write(access: any(named: 'access'), refresh: any(named: 'refresh')))
-          .thenAnswer((_) async {});
+      when(
+        () => storage.write(
+          access: any(named: 'access'),
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async {});
       when(() => storage.clear()).thenAnswer((_) async {});
 
       // Подписываемся ДО действий и ждём ровно 3 события.
       final eventsFuture = controller.stream.take(3).toList();
 
-      await controller.init();       // → unauthenticated
-      await controller.update(accessToken: 'a', refreshToken: 'r'); // → authenticated
-      await controller.drop();       // → unauthenticated
+      await controller.init(); // → unauthenticated
+      await controller.update(
+        accessToken: 'a',
+        refreshToken: 'r',
+      ); // → authenticated
+      await controller.drop(); // → unauthenticated
 
       final states = await eventsFuture;
       expect(states.length, 3);

@@ -6,7 +6,8 @@ class PrefsStorage {
   final SharedPreferences _prefs;
 
   String? getString(String key) => _prefs.getString(key);
-  Future<void> setString(String key, String value) => _prefs.setString(key, value);
+  Future<void> setString(String key, String value) =>
+      _prefs.setString(key, value);
 
   bool? getBool(String key) => _prefs.getBool(key);
   Future<void> setBool(String key, bool value) => _prefs.setBool(key, value);

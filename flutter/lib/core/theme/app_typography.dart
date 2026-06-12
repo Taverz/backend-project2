@@ -27,13 +27,7 @@ abstract final class AppTypography {
     height: 1.4,
   );
 
-  static const label = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-  );
+  static const label = TextStyle(fontSize: 12, fontWeight: FontWeight.w400);
 
-  static const button = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w700,
-  );
+  static const button = TextStyle(fontSize: 15, fontWeight: FontWeight.w700);
 }

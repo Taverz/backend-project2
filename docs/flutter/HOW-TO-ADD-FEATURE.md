@@ -153,9 +153,10 @@ class _HomeScopeHolderState extends State<HomeScopeHolder> {
   void initState() {
     super.initState();
     final appScope = AppScope.of(context);
+    // AppScope сейчас предоставляет: session, dio, prefs, router.
+    // TweetStore и TweetRepository будут добавлены в AppScope при реализации фичи tweet.
     _timelineBloc = TimelineBloc(TimelineRepositoryImpl(
       TimelineRemoteDataSource(appScope.dio),
-      appScope.tweetStore,  // после добавления TweetStore в AppScope
     ));
   }
 

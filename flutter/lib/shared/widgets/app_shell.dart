@@ -7,10 +7,30 @@ class AppShell extends StatelessWidget {
   final StatefulNavigationShell shell;
 
   static const _tabs = [
-    (icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Главная', path: Routes.home),
-    (icon: Icons.search, activeIcon: Icons.search, label: 'Поиск', path: Routes.search),
-    (icon: Icons.notifications_outlined, activeIcon: Icons.notifications, label: 'Уведомления', path: Routes.notifications),
-    (icon: Icons.person_outline, activeIcon: Icons.person, label: 'Профиль', path: Routes.profile),
+    (
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+      label: 'Главная',
+      path: Routes.home,
+    ),
+    (
+      icon: Icons.search,
+      activeIcon: Icons.search,
+      label: 'Поиск',
+      path: Routes.search,
+    ),
+    (
+      icon: Icons.notifications_outlined,
+      activeIcon: Icons.notifications,
+      label: 'Уведомления',
+      path: Routes.notifications,
+    ),
+    (
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+      label: 'Профиль',
+      path: Routes.profile,
+    ),
   ];
 
   @override
@@ -19,10 +39,8 @@ class AppShell extends StatelessWidget {
       body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) => shell.goBranch(
-          i,
-          initialLocation: i == shell.currentIndex,
-        ),
+        onDestinationSelected: (i) =>
+            shell.goBranch(i, initialLocation: i == shell.currentIndex),
         destinations: [
           for (final tab in _tabs)
             NavigationDestination(

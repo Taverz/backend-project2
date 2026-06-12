@@ -49,6 +49,7 @@ class _AppScopeHolderState extends State<AppScopeHolder> {
   late final PrefsStorage _prefs;
   late final GoRouter _router;
   bool _ready = false;
+  Object? _initError;
 
   @override
   void initState() {
@@ -57,34 +58,59 @@ class _AppScopeHolderState extends State<AppScopeHolder> {
   }
 
   Future<void> _initAsync() async {
-    const secureStorage = FlutterSecureStorage();
-    final tokenStorage = TokenStorage(secureStorage);
-    _session = SessionController(tokenStorage);
+    try {
+      const secureStorage = FlutterSecureStorage();
+      const tokenStorage = TokenStorage(secureStorage);
+      _session = SessionController(tokenStorage);
 
-    final sharedPrefs = await SharedPreferences.getInstance();
-    _prefs = PrefsStorage(sharedPrefs);
+      final sharedPrefs = await SharedPreferences.getInstance();
+      _prefs = PrefsStorage(sharedPrefs);
 
-    _dio = DioFactory.create(
-      baseUrl: const String.fromEnvironment('API_URL', defaultValue: 'http://localhost:8080'),
-      session: _session,
-    );
+      _dio = DioFactory.create(
+        baseUrl: const String.fromEnvironment(
+          'API_URL',
+          defaultValue: 'http://localhost:8080',
+        ),
+        session: _session,
+      );
 
-    _router = buildRouter(_session);
+      _router = buildRouter(_session);
 
-    await _session.init();
+      await _session.init();
 
-    if (mounted) setState(() => _ready = true);
+      if (mounted) setState(() => _ready = true);
+    } catch (e, stack) {
+      debugPrint('[AppScopeHolder] initialization failed: $e\n$stack');
+      if (mounted) setState(() => _initError = e);
+    }
   }
 
   @override
   void dispose() {
-    _session.dispose();
-    _dio.close();
+    if (_ready) {
+      _session.dispose();
+      _dio.close();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_initError != null) {
+      return Directionality(
+        textDirection: TextDirection.ltr,
+        child: _InitErrorView(
+          error: _initError!,
+          onRetry: () {
+            setState(() {
+              _initError = null;
+              _ready = false;
+            });
+            _initAsync();
+          },
+        ),
+      );
+    }
     if (!_ready) {
       return const SizedBox.shrink();
     }
@@ -96,4 +122,25 @@ class _AppScopeHolderState extends State<AppScopeHolder> {
       child: widget.child,
     );
   }
+}
+
+class _InitErrorView extends StatelessWidget {
+  const _InitErrorView({required this.error, required this.onRetry});
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xFFFFFFFF),
+    child: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Не удалось запустить приложение'),
+          const SizedBox(height: 16),
+          GestureDetector(onTap: onRetry, child: const Text('Повторить')),
+        ],
+      ),
+    ),
+  );
 }

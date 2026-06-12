@@ -11,7 +11,10 @@ class LoggerInterceptor extends Interceptor {
   }
 
   @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
+  void onResponse(
+    Response<Object?> response,
+    ResponseInterceptorHandler handler,
+  ) {
     if (kDebugMode) {
       debugPrint('← ${response.statusCode} ${response.requestOptions.path}');
     }

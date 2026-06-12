@@ -6,9 +6,5 @@ import 'core/bloc/app_bloc_observer.dart';
 
 void main() {
   Bloc.observer = AppBlocObserver();
-  runApp(
-    const AppScopeHolder(
-      child: ChirpApp(),
-    ),
-  );
+  runApp(const AppScopeHolder(child: ChirpApp()));
 }

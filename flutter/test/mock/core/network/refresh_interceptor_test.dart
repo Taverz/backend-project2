@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:chirp/core/error/exceptions.dart';
 import 'package:chirp/core/network/endpoints.dart';
-import 'package:chirp/core/network/interceptors/error_interceptor.dart';
 import 'package:chirp/core/network/interceptors/refresh_interceptor.dart';
 import 'package:chirp/core/session/session_controller.dart';
 import 'package:chirp/core/session/session_state.dart';
@@ -22,12 +21,14 @@ class _CompletingHandler extends ErrorInterceptorHandler {
   Future<_HandlerResult> get resultFuture => _completer.future;
 
   @override
-  void resolve(Response response) =>
+  void resolve(Response<Object?> response) =>
       _completer.complete(_HandlerResult.resolved(response));
 
   @override
-  void reject(DioException error, {bool callFollowingErrorInterceptor = false}) =>
-      _completer.complete(_HandlerResult.rejected(error));
+  void reject(
+    DioException error, {
+    bool callFollowingErrorInterceptor = false,
+  }) => _completer.complete(_HandlerResult.rejected(error));
 
   @override
   void next(DioException err) =>
@@ -38,7 +39,7 @@ enum _HandlerOutcome { resolved, rejected, nexted }
 
 class _HandlerResult {
   const _HandlerResult._(this.outcome, {this.response, this.error});
-  factory _HandlerResult.resolved(Response r) =>
+  factory _HandlerResult.resolved(Response<Object?> r) =>
       _HandlerResult._(_HandlerOutcome.resolved, response: r);
   factory _HandlerResult.rejected(DioException e) =>
       _HandlerResult._(_HandlerOutcome.rejected, error: e);
@@ -46,7 +47,7 @@ class _HandlerResult {
       _HandlerResult._(_HandlerOutcome.nexted, error: e);
 
   final _HandlerOutcome outcome;
-  final Response? response;
+  final Response<Object?>? response;
   final DioException? error;
 
   bool get wasResolved => outcome == _HandlerOutcome.resolved;
@@ -90,13 +91,18 @@ void main() {
   late int refreshCallCount;
   late bool refreshShouldFail;
 
-  Future<void> _setupSession({bool authenticated = true}) async {
+  Future<void> setupSession({bool authenticated = true}) async {
     if (authenticated) {
-      when(() => storage.write(
-            access: any(named: 'access'),
-            refresh: any(named: 'refresh'),
-          )).thenAnswer((_) async {});
-      await session.update(accessToken: 'old_access', refreshToken: 'old_refresh');
+      when(
+        () => storage.write(
+          access: any(named: 'access'),
+          refresh: any(named: 'refresh'),
+        ),
+      ).thenAnswer((_) async {});
+      await session.update(
+        accessToken: 'old_access',
+        refreshToken: 'old_refresh',
+      );
     } else {
       when(() => storage.read()).thenAnswer((_) async => null);
       await session.init();
@@ -116,40 +122,50 @@ void main() {
     // RefreshInterceptor первым в цепи, за ним мок-сервер.
     dio.interceptors.add(interceptor);
     dio.interceptors.add(
-      InterceptorsWrapper(onRequest: (opts, handler) async {
-        if (opts.path.contains(Endpoints.refresh)) {
-          refreshCallCount++;
-          if (refreshShouldFail) {
-            handler.reject(DioException(
-              requestOptions: opts,
-              response: Response(requestOptions: opts, statusCode: 401),
-              error: const UnauthorizedException(),
-              type: DioExceptionType.badResponse,
-            ));
+      InterceptorsWrapper(
+        onRequest: (opts, handler) async {
+          if (opts.path.contains(Endpoints.refresh)) {
+            refreshCallCount++;
+            if (refreshShouldFail) {
+              handler.reject(
+                DioException(
+                  requestOptions: opts,
+                  response: Response(requestOptions: opts, statusCode: 401),
+                  error: const UnauthorizedException(),
+                  type: DioExceptionType.badResponse,
+                ),
+              );
+            } else {
+              // Небольшая задержка — нужна для теста concurrent 401.
+              await Future<void>.delayed(const Duration(milliseconds: 30));
+              handler.resolve(
+                Response(
+                  requestOptions: opts,
+                  statusCode: 200,
+                  data: {
+                    'access_token': 'new_access',
+                    'refresh_token': 'new_refresh',
+                  },
+                ),
+              );
+            }
           } else {
-            // Небольшая задержка — нужна для теста concurrent 401.
-            await Future<void>.delayed(const Duration(milliseconds: 30));
-            handler.resolve(Response(
-              requestOptions: opts,
-              statusCode: 200,
-              data: {
-                'access_token': 'new_access',
-                'refresh_token': 'new_refresh',
-              },
-            ));
+            // retry или обычный запрос
+            handler.resolve(
+              Response(requestOptions: opts, statusCode: 200, data: 'ok'),
+            );
           }
-        } else {
-          // retry или обычный запрос
-          handler.resolve(Response(requestOptions: opts, statusCode: 200, data: 'ok'));
-        }
-      }),
+        },
+      ),
     );
 
     when(() => storage.clear()).thenAnswer((_) async {});
-    when(() => storage.write(
-          access: any(named: 'access'),
-          refresh: any(named: 'refresh'),
-        )).thenAnswer((_) async {});
+    when(
+      () => storage.write(
+        access: any(named: 'access'),
+        refresh: any(named: 'refresh'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() => session.dispose());
@@ -157,7 +173,7 @@ void main() {
   // ── 1. Пропускает не-401 ошибки ─────────────────────────────────────────────
 
   test('не-401 ошибка пробрасывается через next() без изменений', () async {
-    await _setupSession();
+    await setupSession();
 
     final handler = _CompletingHandler();
     interceptor.onError(_makeNetworkError('/test'), handler);
@@ -170,7 +186,7 @@ void main() {
   // ── 2. Самообращение на /refresh ─────────────────────────────────────────────
 
   test('401 на /auth/refresh вызывает session.drop() и next()', () async {
-    await _setupSession();
+    await setupSession();
 
     final error = _make401(Endpoints.refresh);
     final handler = _CompletingHandler();
@@ -186,7 +202,7 @@ void main() {
   // ── 3. Успешный refresh + retry ──────────────────────────────────────────────
 
   test('401 → refresh успешен → retry → resolve', () async {
-    await _setupSession();
+    await setupSession();
 
     final handler = _CompletingHandler();
     interceptor.onError(_make401('/api/v1/tweets'), handler);
@@ -197,13 +213,15 @@ void main() {
     // Токены обновлены
     expect(session.state, isA<SessionAuthenticated>());
     expect((session.state as SessionAuthenticated).accessToken, 'new_access');
-    verify(() => storage.write(access: 'new_access', refresh: 'new_refresh')).called(1);
+    verify(
+      () => storage.write(access: 'new_access', refresh: 'new_refresh'),
+    ).called(1);
   });
 
   // ── 4. Неудачный refresh → drop + reject ────────────────────────────────────
 
   test('401 → refresh провалился → session.drop() → next()', () async {
-    await _setupSession();
+    await setupSession();
     refreshShouldFail = true;
 
     final handler = _CompletingHandler();
@@ -217,21 +235,24 @@ void main() {
 
   // ── 5. Unauthenticated пользователь — не пытается рефрешить ─────────────────
 
-  test('401 когда сессия Unauthenticated → session.drop(), no refresh', () async {
-    await _setupSession(authenticated: false);
+  test(
+    '401 когда сессия Unauthenticated → session.drop(), no refresh',
+    () async {
+      await setupSession(authenticated: false);
 
-    final handler = _CompletingHandler();
-    interceptor.onError(_make401('/api/v1/tweets'), handler);
-    final result = await handler.resultFuture;
+      final handler = _CompletingHandler();
+      interceptor.onError(_make401('/api/v1/tweets'), handler);
+      final result = await handler.resultFuture;
 
-    expect(result.wasNexted, isTrue);
-    expect(refreshCallCount, 0);
-  });
+      expect(result.wasNexted, isTrue);
+      expect(refreshCallCount, 0);
+    },
+  );
 
   // ── 6. Single-flight: concurrent 401s → только один refresh ─────────────────
 
   test('два одновременных 401 инициируют только один refresh-запрос', () async {
-    await _setupSession();
+    await setupSession();
 
     final handler1 = _CompletingHandler();
     final handler2 = _CompletingHandler();
@@ -242,7 +263,10 @@ void main() {
     interceptor.onError(_make401('/api/v1/tweets'), handler1);
     interceptor.onError(_make401('/api/v1/timeline'), handler2);
 
-    final results = await Future.wait([handler1.resultFuture, handler2.resultFuture]);
+    final results = await Future.wait([
+      handler1.resultFuture,
+      handler2.resultFuture,
+    ]);
 
     expect(refreshCallCount, 1, reason: 'single-flight: только один refresh');
     expect(results[0].wasResolved, isTrue, reason: 'первый запрос ретрайнулся');
@@ -251,19 +275,22 @@ void main() {
 
   // ── 7. После завершения refresh следующий 401 запускает новый цикл ───────────
 
-  test('второй 401 после завершения первого refresh запускает новый refresh', () async {
-    await _setupSession();
+  test(
+    'второй 401 после завершения первого refresh запускает новый refresh',
+    () async {
+      await setupSession();
 
-    // Первый цикл
-    final handler1 = _CompletingHandler();
-    interceptor.onError(_make401('/api/v1/tweets'), handler1);
-    await handler1.resultFuture;
-    expect(refreshCallCount, 1);
+      // Первый цикл
+      final handler1 = _CompletingHandler();
+      interceptor.onError(_make401('/api/v1/tweets'), handler1);
+      await handler1.resultFuture;
+      expect(refreshCallCount, 1);
 
-    // Второй цикл (после завершения первого)
-    final handler2 = _CompletingHandler();
-    interceptor.onError(_make401('/api/v1/timeline'), handler2);
-    await handler2.resultFuture;
-    expect(refreshCallCount, 2);
-  });
+      // Второй цикл (после завершения первого)
+      final handler2 = _CompletingHandler();
+      interceptor.onError(_make401('/api/v1/timeline'), handler2);
+      await handler2.resultFuture;
+      expect(refreshCallCount, 2);
+    },
+  );
 }
