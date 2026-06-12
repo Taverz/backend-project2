@@ -4,139 +4,386 @@
 
 ## Stack
 
-| Layer | Choice |
-|-------|--------|
-| Platform | Flutter 3.x (web + mobile) |
-| State management | Riverpod (with code generation) |
-| Navigation | GoRouter |
-| HTTP | `http` package + custom ApiClient |
-| Models | Hand-written fromJson/toJson |
-| Auth storage | flutter_secure_storage |
-| Linting | flutter_lints |
+| Слой | Выбор |
+|-------|-------|
+| Платформа | Flutter 3.x (web + mobile) |
+| State management | `flutter_bloc` (Bloc / Cubit) |
+| Координация на экране | WM (Widget Model) на `ValueNotifier` + `Stream` |
+| Сессия (auth-состояние) | `SessionController` — чистый Dart, `Stream` + `ValueNotifier`, живёт в core |
+| DI / Scope | `InheritedWidget`-скоупы (AppScope → FeatureScope → ScreenScope) |
+| Навигация | `go_router` + `StatefulShellRoute.indexedStack` |
+| HTTP | `dio` + интерсепторы (auth, single-flight refresh, logger, error mapping) |
+| Хранилище токенов | `flutter_secure_storage` |
+| Настройки | `shared_preferences` |
+| Модели | Ручные `fromJson` / `toJson`, equality через `equatable` |
+| Кодоген | **отсутствует** — без freezed, json_serializable, build_runner |
+| Линтер | `flutter_lints` |
 
 ---
 
-## pubspec.yaml (key deps)
+## pubspec.yaml (ключевые зависимости)
 
 ```yaml
 dependencies:
   flutter:
     sdk: flutter
-  flutter_riverpod: ^2.5
-  riverpod_annotation: ^2.3
+
+  flutter_bloc: ^8.1
+  equatable: ^2.0
+
   go_router: ^14.0
+
+  dio: ^5.4
+
   flutter_secure_storage: ^9.0
-  http: ^1.2
+  shared_preferences: ^2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  riverpod_generator: ^2.4
-  build_runner: ^2.4
+  bloc_test: ^9.1
+  mocktail: ^1.0
   flutter_lints: ^4.0
 ```
 
 ---
 
-## Directory Layout
+## Ключевые архитектурные решения
+
+### 1. Сессия — это инфраструктура, а не фича
+
+`SessionController` живёт в `core/session/`. Это чистый Dart-класс без зависимостей от Flutter и Bloc:
+
+- хранит/читает токены через `TokenStorage` (обёртка над secure storage);
+- отдаёт `ValueListenable<SessionState>` (authenticated / unauthenticated / unknown) и `Stream<SessionState>`;
+- единственная точка, которая умеет «разлогинить» приложение.
+
+Кто на него подписан:
+
+| Потребитель | Зачем |
+|-------------|-------|
+| `go_router.refreshListenable` | redirect на `/login` при разлогине — без участия Bloc |
+| `RefreshInterceptor` (dio) | читает/обновляет токены, при провале refresh вызывает `session.drop()` |
+| `AuthBloc` (фича auth) | слушает сессию, чтобы отрисовывать UI логина; **не является** источником истины |
+
+Это разрывает цикл «AuthBloc → Dio → AuthBloc» из v1: цепочка теперь линейная
+`Dio → SessionController ← AuthBloc`, и app-слой не зависит от presentation фичи.
+
+### 2. Single-flight refresh
+
+`RefreshInterceptor` держит один shared `Future<bool>` (Completer):
+
+```
+401 пришёл → refresh уже идёт?
+  ├── да  → await тот же Future, потом retry
+  └── нет → стартуем refresh, все последующие 401 ждут его
+refresh упал → session.drop() → router сам уводит на /login
+```
+
+Никаких конкурирующих refresh-запросов и затирания токенов.
+
+### 3. Фича-владелец домена + правило импортов между фичами
+
+Сущности `Tweet` и `User` нужны нескольким фичам. Вместо дублирования вводится понятие **фичи-владельца**:
+
+- `features/tweet/` владеет доменом твита (`Tweet`, `TweetRepository`);
+- `features/profile/` владеет доменом пользователя (`UserProfile`, `UserRepository`);
+- `features/auth/` владеет `AuthTokens` и сценариями входа.
+
+**Правило:** фича может импортировать из другой фичи **только `domain/`** (entities + контракты репозиториев). Импорт чужих `data/` и `presentation/` запрещён.
+
+```
+home ──► tweet/domain          (лента состоит из твитов)
+search ──► tweet/domain, profile/domain
+notifications ──► tweet/domain, profile/domain
+tweet ──► profile/domain       (автор твита)
+```
+
+Граф направленный и без циклов; владельцы доменов (`tweet`, `profile`) не зависят ни от кого, кроме core.
+
+### 4. Реактивный TweetStore — синхронизация между экранами
+
+Проблема: лайк на экране деталей должен мгновенно отразиться в ленте, профиле и результатах поиска.
+
+Решение — in-memory нормализованный кэш в data-слое фичи-владельца:
+
+```
+features/tweet/data/store/tweet_store.dart
+```
+
+- `Map<TweetId, Tweet>` + broadcast `Stream<Tweet>` изменений;
+- `TweetRepositoryImpl` — единственный, кто пишет в стор (после любого fetch / like / repost / delete);
+- контракт в domain расширен: `Stream<Tweet> watchTweet(TweetId id)` и `Stream<TweetChange> get changes`.
+
+Как этим пользуются другие фичи:
+
+| Экран | Поведение |
+|-------|-----------|
+| Лента (`TimelineBloc`) | держит список **id**, карточка подписывается на `watchTweet(id)` |
+| Детали (`TweetDetailBloc`) | `watchTweet(id)` + догрузка треда |
+| Профиль / поиск | то же: списки id + точечные подписки |
+
+Лайк где угодно → repository обновляет стор → все подписчики получают новый `Tweet`. Никакой шины событий между Bloc'ами, никаких ручных «обнови соседний экран».
+
+Аналогично (легче) — `UserStore` в `profile/data/store/` для счётчиков подписок.
+
+### 5. Переиспользуемая пагинация
+
+`core/bloc/paginated_bloc.dart` — абстрактный `PaginatedBloc<T>`:
+
+- состояние: `items`, `cursor`, `hasMore`, `isLoadingMore`, `error`;
+- события: `Requested`, `LoadMoreRequested`, `RefreshRequested`;
+- защита от двойного `loadMore`, от `loadMore` во время refresh;
+- наследник реализует один метод — `fetchPage(cursor)`.
+
+Наследники: `TimelineBloc`, `FollowersBloc`, `FollowingBloc`, `SearchTweetsBloc`, `NotificationsBloc`, `UserTweetsBloc`. Cursor-логика написана один раз.
+
+### 6. Usecase'ы — только там, где есть логика
+
+Правило вместо церемонии:
+
+- **Bloc → repository напрямую**, если операция = один вызов репозитория (load timeline, get profile);
+- **Usecase обязателен**, если есть оркестрация: несколько репозиториев, валидация, побочные эффекты. Примеры: `LoginUseCase` (auth API → сохранить токены → прогреть профиль), `PostTweetUseCase` (создать → положить в стор → инвалидировать черновик), `ToggleLikeUseCase` (оптимистичное обновление стора → запрос → откат при ошибке).
+
+Это убирает пустые пробросы `call() => repo.method()` из v1, но сохраняет место для бизнес-правил.
+
+### 7. Трёхуровневые скоупы с явным жизненным циклом
+
+| Scope | Живёт | Содержит | Кто создаёт/диспозит |
+|-------|-------|----------|----------------------|
+| `AppScope` | всё приложение | Dio, TokenStorage, SessionController, TweetStore, UserStore, репозитории-владельцы (tweet, profile), AppRouter | `AppScopeHolder` (StatefulWidget над MaterialApp) |
+| `FeatureScope` | пока активна ветка/маршрут фичи | datasources фичи, её репозитории, usecase'ы, долгоживущие Bloc'и фичи (TimelineBloc) | `XxxScopeHolder` — обёртка builder'а ветки `StatefulShellRoute` или страницы |
+| `ScreenScope` (опционально) | один экран | WM экрана, эпизодические Cubit'ы (LikeCubit, форма) | `StatefulWidget` экрана |
+
+Репозитории-владельцы (`TweetRepository`, `UserRepository`) подняты в `AppScope` сознательно: их сторы — глобальный кэш, нужный всем фичам.
+
+Доступ: `AppScope.of(context)`, `HomeScope.of(context)` — статические методы, под капотом `dependOnInheritedWidgetOfExactType`. Никаких сервис-локаторов.
+
+### 8. Контракт WM
+
+`core/wm/base_wm.dart` задаёт жёсткий контракт:
+
+- **Создание:** экран — это `StatefulWidget`; в `initState` создаётся WM фабрикой `XxxWm(context)` — фабрика сама достаёт зависимости из скоупов. Виджеты получают WM через локальный `ScreenScope` либо конструктором.
+- **Жизненный цикл:** `init()` в `initState`, `dispose()` в `dispose` — WM закрывает свои `ValueNotifier`, подписки на стримы и **эпизодические** Cubit'ы, которые он создал сам. Bloc'и из FeatureScope WM не закрывает — не он владелец.
+- **Что внутри:** ссылки на Bloc'и, локальные `ValueNotifier` (скролл, фокус, видимость FAB), комбинирование стримов нескольких Bloc'ов в derived-состояние для виджета, методы-обработчики UI-событий (`onLikeTap`, `onScrollEnd` → транслируются в события Bloc'ов).
+- **Чего внутри нет:** бизнес-логики, вызовов репозиториев/usecase'ов напрямую, навигации мимо роутера.
+- **Когда WM не нужен:** на экране один Bloc и нет локального стейта → обычный `BlocBuilder`, без церемоний.
+- **Тестирование:** WM — чистый Dart-класс, зависимости приходят через конструктор у фабрики → юнит-тестится с мок-Bloc'ами без виджет-окружения.
+
+---
+
+## Структура каталогов
 
 ```
 chirp-flutter/
 ├── lib/
-│   ├── main.dart                        # ProviderScope + MaterialApp.router
+│   ├── main.dart                              # bootstrap: BlocObserver, runApp(AppScopeHolder())
 │   │
-│   ├── app/
-│   │   ├── app.dart                     # MaterialApp.router, theme, shell
-│   │   └── router.dart                  # GoRouter: all routes + auth redirect
+│   ├── app/                                   # composition root
+│   │   ├── chirp_app.dart                     # MaterialApp.router + theme
+│   │   ├── di/
+│   │   │   ├── app_scope.dart                 # InheritedWidget с глобальными зависимостями
+│   │   │   └── app_scope_holder.dart          # создаёт Dio, Session, сторы, репозитории-владельцы
+│   │   └── router/
+│   │       ├── app_router.dart                # GoRouter: StatefulShellRoute + redirect
+│   │       ├── routes.dart                    # пути и имена маршрутов
+│   │       └── session_refresh_listenable.dart # SessionController → Listenable для router
 │   │
-│   ├── core/
-│   │   ├── api/
-│   │   │   ├── client.dart              # ApiClient: base URL, JWT injection, 401→refresh
-│   │   │   ├── endpoints.dart           # All endpoint constants (from shared/API.md)
-│   │   │   └── exceptions.dart          # ApiException, AuthException
-│   │   ├── models/
-│   │   │   ├── user.dart                # User, AuthResponse (fromJson)
-│   │   │   ├── tweet.dart               # Tweet (fromJson)
-│   │   │   ├── notification.dart
-│   │   │   └── pagination.dart          # PageResponse<T>.fromJson (generic)
-│   │   ├── auth/
-│   │   │   ├── auth_service.dart        # Token storage (secure), refresh flow
-│   │   │   └── auth_provider.dart       # Riverpod provider: current user, isLoggedIn
+│   ├── core/                                  # фундамент; не знает о фичах
+│   │   ├── network/
+│   │   │   ├── dio_factory.dart
+│   │   │   ├── endpoints.dart
+│   │   │   └── interceptors/
+│   │   │       ├── auth_interceptor.dart      # Bearer из SessionController
+│   │   │       ├── refresh_interceptor.dart   # single-flight refresh, queue ожидающих
+│   │   │       ├── error_interceptor.dart     # DioException → ApiException/NetworkException
+│   │   │       └── logger_interceptor.dart
+│   │   ├── session/
+│   │   │   ├── session_controller.dart        # состояние сессии, drop(), update(tokens)
+│   │   │   ├── session_state.dart             # sealed: unknown / authenticated / unauthenticated
+│   │   │   └── token_storage.dart             # обёртка secure storage
+│   │   ├── error/
+│   │   │   ├── exceptions.dart                # инфраструктурные: Api/Network/Unauthorized
+│   │   │   └── failures.dart                  # доменные: sealed Failure (network, validation, notFound, unknown)
+│   │   ├── result/
+│   │   │   └── result.dart                    # sealed Result<T>: Ok(value) / Err(Failure)
+│   │   ├── bloc/
+│   │   │   ├── app_bloc_observer.dart
+│   │   │   └── paginated_bloc.dart            # база для всех списков с cursor
+│   │   ├── wm/
+│   │   │   └── base_wm.dart                   # контракт WM: init/dispose, helpers
+│   │   ├── storage/
+│   │   │   └── prefs_storage.dart
 │   │   ├── theme/
-│   │   │   └── app_theme.dart           # From shared/DESIGN-SYSTEM.md
+│   │   │   ├── app_theme.dart
+│   │   │   ├── app_colors.dart
+│   │   │   └── app_typography.dart
 │   │   └── utils/
-│   │       ├── date_format.dart         # "2m ago", "yesterday", "June 10"
-│   │       └── validators.dart          # Email, username, password validators
+│   │       ├── date_format.dart
+│   │       ├── validators.dart
+│   │       └── debouncer.dart
 │   │
-│   ├── features/                        # Feature-first
-│   │   ├── auth/
-│   │   │   ├── providers/
-│   │   │   │   └── auth_provider.dart   # login/register/logout state
-│   │   │   ├── screens/
-│   │   │   │   ├── login_screen.dart
-│   │   │   │   └── register_screen.dart
-│   │   │   └── widgets/
-│   │   │       ├── login_form.dart
-│   │   │       └── register_form.dart
-│   │   ├── home/
-│   │   │   ├── providers/
-│   │   │   │   └── timeline_provider.dart  # AsyncNotifier: loadMore, refresh
-│   │   │   ├── screens/
-│   │   │   │   └── home_screen.dart
-│   │   │   └── widgets/
-│   │   │       ├── tweet_card.dart         # Avatar + body + actions row
-│   │   │       └── timeline_list.dart       # PaginatedListView with refresh
-│   │   ├── tweet/
-│   │   │   ├── providers/
-│   │   │   │   └── tweet_provider.dart
-│   │   │   ├── screens/
-│   │   │   │   ├── tweet_detail_screen.dart
-│   │   │   │   └── create_tweet_screen.dart
-│   │   │   └── widgets/
-│   │   │       ├── tweet_actions.dart       # Like/Reply/Share buttons
-│   │   │       └── tweet_body.dart           # Text with highlight
-│   │   ├── profile/
-│   │   │   ├── providers/
-│   │   │   │   └── profile_provider.dart
-│   │   │   ├── screens/
-│   │   │   │   ├── profile_screen.dart
-│   │   │   │   ├── followers_screen.dart
-│   │   │   │   └── following_screen.dart
-│   │   │   └── widgets/
-│   │   │       ├── profile_header.dart
-│   │   │       └── stats_row.dart
-│   │   ├── notifications/
-│   │   │   ├── providers/
-│   │   │   │   └── notifications_provider.dart
-│   │   │   ├── screens/
-│   │   │   │   └── notifications_screen.dart
-│   │   │   └── widgets/
-│   │   │       └── notification_tile.dart
-│   │   └── search/
-│   │       ├── providers/
-│   │       │   └── search_provider.dart
-│   │       ├── screens/
-│   │       │   └── search_screen.dart
-│   │       └── widgets/
-│   │           ├── search_bar_widget.dart
-│   │           └── search_results.dart
-│   │
-│   └── shared/                            # Reusable UI
-│       ├── avatar.dart                    # CircleAvatar with initials fallback
-│       ├── loading.dart                   # Skeleton / CircularProgressIndicator
-│       ├── error_view.dart                # Error + Retry button
-│       ├── empty_view.dart                # Empty state with CTA
-│       └── infinite_scroll_list.dart      # ScrollController + loadMore callback
-│
-├── test/                                  # Mirror of lib/ structure
-│   ├── core/
-│   │   ├── api/
-│   │   └── models/
 │   ├── features/
-│   │   ├── auth/
-│   │   ├── home/
-│   │   └── ...
+│   │   │
+│   │   ├── tweet/                             # ВЛАДЕЛЕЦ домена Tweet
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/
+│   │   │   │   │   ├── tweet.dart
+│   │   │   │   │   └── tweet_change.dart      # liked / created / deleted / updated
+│   │   │   │   ├── repositories/
+│   │   │   │   │   └── tweet_repository.dart  # CRUD + watchTweet(id) + changes
+│   │   │   │   └── usecases/
+│   │   │   │       ├── post_tweet_usecase.dart
+│   │   │   │       └── toggle_like_usecase.dart   # оптимистичный апдейт + откат
+│   │   │   ├── data/
+│   │   │   │   ├── datasources/
+│   │   │   │   │   └── tweet_remote_datasource.dart
+│   │   │   │   ├── dto/
+│   │   │   │   │   ├── tweet_dto.dart
+│   │   │   │   │   └── page_dto.dart
+│   │   │   │   ├── mappers/
+│   │   │   │   │   └── tweet_mapper.dart
+│   │   │   │   ├── store/
+│   │   │   │   │   └── tweet_store.dart       # нормализованный кэш + broadcast stream
+│   │   │   │   └── repositories/
+│   │   │   │       └── tweet_repository_impl.dart # пишет в store, читает сквозь него
+│   │   │   └── presentation/
+│   │   │       ├── scope/
+│   │   │       │   └── tweet_scope.dart
+│   │   │       ├── bloc/
+│   │   │       │   └── tweet_detail_bloc.dart # твит + тред ответов
+│   │   │       ├── cubit/
+│   │   │       │   ├── like_cubit.dart
+│   │   │       │   └── composer_cubit.dart    # текст, лимит символов, черновик
+│   │   │       ├── wm/
+│   │   │       │   └── tweet_detail_wm.dart   # DetailBloc + LikeCubit + ComposerCubit
+│   │   │       ├── screens/
+│   │   │       │   ├── tweet_detail_screen.dart
+│   │   │       │   └── create_tweet_screen.dart
+│   │   │       └── widgets/
+│   │   │           ├── tweet_card.dart        # подписан на watchTweet(id); переиспользуется лентой/поиском/профилем
+│   │   │           ├── tweet_actions.dart
+│   │   │           └── tweet_body.dart
+│   │   │
+│   │   ├── profile/                           # ВЛАДЕЛЕЦ домена User
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/
+│   │   │   │   │   └── user_profile.dart
+│   │   │   │   ├── repositories/
+│   │   │   │   │   └── user_repository.dart   # profile, follow, watchUser(id)
+│   │   │   │   └── usecases/
+│   │   │   │       └── toggle_follow_usecase.dart
+│   │   │   ├── data/
+│   │   │   │   ├── datasources/…
+│   │   │   │   ├── dto/…
+│   │   │   │   ├── mappers/…
+│   │   │   │   ├── store/
+│   │   │   │   │   └── user_store.dart
+│   │   │   │   └── repositories/…
+│   │   │   └── presentation/
+│   │   │       ├── scope/profile_scope.dart
+│   │   │       ├── bloc/
+│   │   │       │   ├── profile_bloc.dart
+│   │   │       │   ├── user_tweets_bloc.dart  # extends PaginatedBloc<TweetId>
+│   │   │       │   ├── followers_bloc.dart    # extends PaginatedBloc<UserProfile>
+│   │   │       │   └── following_bloc.dart
+│   │   │       ├── wm/
+│   │   │       │   └── profile_wm.dart        # ProfileBloc + UserTweetsBloc + session (свой/чужой)
+│   │   │       ├── screens/
+│   │   │       │   ├── profile_screen.dart
+│   │   │       │   ├── followers_screen.dart
+│   │   │       │   └── following_screen.dart
+│   │   │       └── widgets/
+│   │   │           ├── profile_header.dart
+│   │   │           ├── follow_button.dart
+│   │   │           └── stats_row.dart
+│   │   │
+│   │   ├── auth/                              # сценарии входа; сессией НЕ владеет
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/auth_tokens.dart
+│   │   │   │   ├── repositories/auth_repository.dart
+│   │   │   │   └── usecases/
+│   │   │   │       ├── login_usecase.dart     # API → session.update → прогрев профиля
+│   │   │   │       ├── register_usecase.dart
+│   │   │   │       └── logout_usecase.dart    # API revoke → session.drop()
+│   │   │   ├── data/
+│   │   │   │   ├── datasources/auth_remote_datasource.dart
+│   │   │   │   ├── dto/…
+│   │   │   │   └── repositories/auth_repository_impl.dart
+│   │   │   └── presentation/
+│   │   │       ├── scope/auth_scope.dart
+│   │   │       ├── cubit/
+│   │   │       │   ├── login_form_cubit.dart
+│   │   │       │   └── register_form_cubit.dart
+│   │   │       ├── screens/
+│   │   │       │   ├── login_screen.dart
+│   │   │       │   └── register_screen.dart
+│   │   │       └── widgets/
+│   │   │           ├── login_form.dart
+│   │   │           └── register_form.dart
+│   │   │
+│   │   ├── home/                              # лента; зависит от tweet/domain
+│   │   │   ├── domain/
+│   │   │   │   └── repositories/
+│   │   │   │       └── timeline_repository.dart  # отдаёт страницы TweetId (твиты — через TweetStore)
+│   │   │   ├── data/
+│   │   │   │   ├── datasources/timeline_remote_datasource.dart
+│   │   │   │   └── repositories/timeline_repository_impl.dart # складывает твиты в TweetStore, наружу — id
+│   │   │   └── presentation/
+│   │   │       ├── scope/home_scope.dart
+│   │   │       ├── bloc/
+│   │   │       │   └── timeline_bloc.dart     # extends PaginatedBloc<TweetId>
+│   │   │       ├── wm/
+│   │   │       │   └── home_wm.dart           # TimelineBloc + scroll-to-top + FAB visibility
+│   │   │       ├── screens/home_screen.dart
+│   │   │       └── widgets/timeline_list.dart # рендерит tweet/widgets/tweet_card по id
+│   │   │
+│   │   ├── notifications/
+│   │   │   ├── domain/…                       # Notification entity — своя
+│   │   │   ├── data/…
+│   │   │   └── presentation/
+│   │   │       ├── bloc/notifications_bloc.dart  # extends PaginatedBloc<AppNotification>
+│   │   │       ├── screens/notifications_screen.dart
+│   │   │       └── widgets/notification_tile.dart
+│   │   │
+│   │   └── search/                            # зависит от tweet/domain и profile/domain
+│   │       ├── domain/
+│   │       │   └── repositories/search_repository.dart
+│   │       ├── data/…
+│   │       └── presentation/
+│   │           ├── scope/search_scope.dart
+│   │           ├── bloc/
+│   │           │   ├── search_tweets_bloc.dart   # extends PaginatedBloc<TweetId>
+│   │           │   └── search_users_bloc.dart
+│   │           ├── cubit/search_query_cubit.dart # текст + debounce + активная вкладка
+│   │           ├── wm/
+│   │           │   └── search_wm.dart            # QueryCubit → дёргает оба Bloc'а
+│   │           ├── screens/search_screen.dart
+│   │           └── widgets/
+│   │               ├── search_bar_widget.dart
+│   │               └── search_results.dart
+│   │
+│   └── shared/                                # UI kit; без бизнес-логики
+│       ├── widgets/
+│       │   ├── avatar.dart
+│       │   ├── app_shell.dart                 # каркас StatefulShellRoute + bottom bar
+│       │   ├── loading_view.dart
+│       │   ├── skeleton.dart
+│       │   ├── error_view.dart
+│       │   ├── empty_view.dart
+│       │   └── infinite_scroll_list.dart      # generic: items + onLoadMore + hasMore
+│       └── extensions/
+│           └── context_x.dart
+│
+├── test/                                      # зеркалит lib/
+│   ├── core/
+│   │   ├── network/                           # interceptors: single-flight refresh!
+│   │   ├── session/
+│   │   └── bloc/                              # PaginatedBloc edge cases
+│   ├── features/
+│   │   └── <feature>/{domain,data,presentation}/
 │   └── shared/
+│
 ├── pubspec.yaml
 ├── analysis_options.yaml
 └── README.md
@@ -144,243 +391,77 @@ chirp-flutter/
 
 ---
 
-## Auth patterns
+## Граф зависимостей
 
-### Token storage
-
-```dart
-// core/auth/auth_service.dart
-class AuthService {
-  final _storage = FlutterSecureStorage();
-  
-  Future<void> saveTokens(String access, String refresh) async {
-    await _storage.write(key: 'access_token', value: access);
-    await _storage.write(key: 'refresh_token', value: refresh);
-  }
-  
-  Future<String?> getAccessToken() => _storage.read(key: 'access_token');
-  Future<String?> getRefreshToken() => _storage.read(key: 'refresh_token');
-  Future<bool> isLoggedIn() async => await getAccessToken() != null;
-  Future<void> clearTokens() async => await _storage.deleteAll();
-}
+```
+                    ┌─────────────────────────────┐
+                    │            app/             │  composition root
+                    │  (знает всё, его не знает   │
+                    │         никто)              │
+                    └──────────────┬──────────────┘
+                                   │
+        ┌──────────┬───────────────┼────────────┬─────────────┐
+        ▼          ▼               ▼            ▼             ▼
+     auth       home            tweet        profile    notifications, search
+        │          │               │            │             │
+        │          └──► tweet/domain ◄──────────┼─────────────┤
+        │                          │            │             │
+        │                          └──► profile/domain ◄──────┘
+        │
+        ▼
+   ┌─────────────────────────────────────────────────────────┐
+   │                         core/                           │
+   │   network · session · error · result · bloc · wm · …    │
+   └─────────────────────────────────────────────────────────┘
+                                   ▲
+                              shared/ (UI kit)
 ```
 
-### Auth provider (Riverpod)
-
-```dart
-@riverpod
-class Auth extends _$Auth {
-  @override
-  Future<AuthState> build() async {
-    final isLoggedIn = await ref.read(authServiceProvider).isLoggedIn();
-    if (isLoggedIn) {
-      try { return AuthState(await _fetchUser(), isLoggedIn: true); }
-      catch (_) { return AuthState(null, isLoggedIn: false); }
-    }
-    return AuthState(null, isLoggedIn: false);
-  }
-  
-  Future<void> login(String email, String password) async { /* ApiClient → saveTokens → state */ }
-  Future<void> register(String username, String email, String password) async { /* ... */ }
-  Future<void> logout() async { /* clearTokens → state = unauthenticated */ }
-}
-```
-
-### GoRouter guard
-
-```dart
-// app/router.dart
-final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  
-  return GoRouter(
-    redirect: (context, state) {
-      final isLoggedIn = authState.valueOrNull?.isLoggedIn ?? false;
-      final path = state.matchedLocation;
-      final isPublic = path == '/login' || path == '/register';
-      
-      if (!isLoggedIn && !isPublic) return '/login';
-      if (isLoggedIn && isPublic) return '/home';
-      return null;
-    },
-    routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-      ShellRoute(
-        builder: (_, __, child) => AppShell(child: child),
-        routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-          GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
-          GoRoute(path: '/tweet/:id', builder: (_, state) => TweetDetailScreen(id: state.pathParameters['id']!)),
-          GoRoute(path: '/create', builder: (_, __) => const CreateTweetScreen()),
-          GoRoute(path: '/user/:id', builder: (_, state) => ProfileScreen(id: state.pathParameters['id']!)),
-        ],
-      ),
-    ],
-  );
-});
-```
-
-### ApiClient with 401 → refresh
-
-```dart
-class ApiClient {
-  final AuthService _auth;
-  final http.Client _client = http.Client();
-  static const _base = 'http://localhost:8080/api/v1';
-
-  Future<http.Response> get(String path, {Map<String, String>? query}) async {
-    for (var attempt = 0; attempt < 2; attempt++) {
-      final token = await _auth.getAccessToken();
-      final uri = Uri.parse('$_base$path').replace(queryParameters: query);
-      final response = await _client.get(uri, headers: _headers(token));
-      if (response.statusCode != 401) return response;
-      if (!await _tryRefresh()) break;
-    }
-    throw AuthException();
-  }
-
-  Future<bool> _tryRefresh() async {
-    final refresh = await _auth.getRefreshToken();
-    if (refresh == null) return false;
-    try {
-      final res = await _client.post(
-        Uri.parse('$_base/auth/refresh'),
-        body: jsonEncode({'refresh_token': refresh}),
-        headers: {'Content-Type': 'application/json'},
-      );
-      if (res.statusCode != 200) return false;
-      final data = jsonDecode(res.body);
-      await _auth.saveTokens(data['access_token'], data['refresh_token']);
-      return true;
-    } catch (_) { return false; }
-  }
-
-  Map<String, String> _headers(String? token) => {
-    'Content-Type': 'application/json',
-    if (token != null) 'Authorization': 'Bearer $token',
-  };
-}
-```
+Правила:
+1. `core` не импортирует ничего из `features`, `shared`, `app`.
+2. `shared` импортирует только `core` (темы, утилиты).
+3. Фича импортирует: свой код, `core`, `shared`, и **только `domain/`** других фич.
+4. `app` — единственное место, где разрешено знать обо всех фичах сразу (сборка скоупов и роутера).
+5. Внутри фичи: `presentation → domain ← data`; `domain` не импортирует Dio, Flutter widgets, dto.
 
 ---
 
-## Riverpod patterns
+## Маршрутизация
 
-### Pagination (Timeline example)
-
-```dart
-@riverpod
-class Timeline extends _$Timeline {
-  String? _cursor;
-  bool _hasMore = true;
-
-  @override
-  Future<List<Tweet>> build() => _fetch(null);
-
-  Future<List<Tweet>> _fetch(String? cursor) async {
-    final client = ref.read(apiClientProvider);
-    final res = await client.get('/timeline/home', query: {'limit': '20', if (cursor != null) 'cursor': cursor});
-    final body = jsonDecode(res.body);
-    _cursor = body['next_cursor'];
-    _hasMore = body['has_more'];
-    return (body['data'] as List).map((e) => Tweet.fromJson(e)).toList();
-  }
-
-  Future<void> loadMore() async {
-    if (!_hasMore || state.isLoading) return;
-    final more = await _fetch(_cursor);
-    state = AsyncData([...state.value ?? [], ...more]);
-  }
-
-  Future<void> refresh() async { state = AsyncLoading(); state = AsyncData(await _fetch(null)); }
-}
-```
-
-### Loading/Error/Data in UI
-
-```dart
-// home_screen.dart
-final timeline = ref.watch(timelineProvider);
-timeline.when(
-  loading: () => const SkeletonList(),
-  error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(timelineProvider)),
-  data: (tweets) => tweets.isEmpty
-    ? const EmptyView(message: 'No tweets yet. Follow someone!')
-    : TimelineList(tweets: tweets, onLoadMore: () => ref.read(timelineProvider.notifier).loadMore()),
-);
-```
+- `StatefulShellRoute.indexedStack` с ветками: Home / Search / Notifications / Profile — состояние и скролл каждой вкладки сохраняются при переключении.
+- `refreshListenable: SessionRefreshListenable(sessionController)` — редирект реагирует на сессию напрямую, минуя Bloc.
+- `redirect`: `unknown` → splash; `unauthenticated` + приватный путь → `/login`; `authenticated` + `/login|/register` → `/home`.
+- Поверх shell: `/tweet/:id`, `/create`, `/user/:id`, `/user/:id/followers`, `/user/:id/following` (full-screen поверх табов).
+- FeatureScopeHolder'ы оборачивают builder'ы веток — зависимости вкладки создаются при первом входе и живут вместе с веткой.
 
 ---
 
-## Forms
+## Поток ошибок
 
-```dart
-// features/auth/widgets/login_form.dart
-class LoginForm extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<LoginForm> createState() => _LoginFormState();
-}
-
-class _LoginFormState extends ConsumerState<LoginForm> {
-  final _form = GlobalKey<FormState>();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  bool _loading = false;
-
-  Future<void> _submit() async {
-    if (!_form.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await ref.read(authProvider.notifier).login(_email.text, _password.text);
-    if (mounted) setState(() => _loading = false); // Error handled by provider → UI reacts
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: _form,
-      child: Column(children: [
-        TextFormField(
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(labelText: 'Email'),
-          validator: (v) => validateEmail(v) ? null : 'Invalid email',
-        ),
-        TextFormField(
-          controller: _password,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Password'),
-          validator: (v) => (v?.length ?? 0) >= 8 ? null : 'At least 8 characters',
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: _loading ? null : _submit,
-          child: _loading ? const CircularProgressIndicator() : const Text('Log in'),
-        ),
-      ]),
-    );
-  }
-}
-```
+| Уровень | Поведение |
+|---------|-----------|
+| `error_interceptor` | `DioException` → типизированные `ApiException` / `NetworkException` |
+| `refresh_interceptor` | 401 → single-flight refresh → retry; провал → `session.drop()` |
+| datasource | бросает исключения как есть |
+| repository | `try/catch` → `Result<T>` (`Ok` / `Err(Failure)`); маппинг exception → Failure в одном месте |
+| usecase | оркестрация; оптимистичные апдейты делают откат стора при `Err` |
+| bloc | `Err(failure)` → состояние ошибки с человекочитаемым сообщением |
+| wm / screen | `BlocBuilder` → `ErrorView` (полноэкранная), `BlocListener` → `SnackBar` (точечная) |
+| router | реагирует только на `SessionState`, не на ошибки Bloc'ов |
 
 ---
 
-## Error handling strategy
+## Соглашения (чек-лист ревью)
 
-| Layer | What happens |
-|-------|-------------|
-| **ApiClient** | Catches 401 → tries refresh → if fails → throws `AuthException` (caught by GoRouter redirect) |
-| **Provider** | Catches exceptions → state = `AsyncError` → UI shows ErrorView |
-| **Screen** | `ref.listen(authProvider, (_, next) { if (next is AsyncError) showSnackBar(...) })` |
-| **Router** | On `AuthException` or `clearTokens()` → redirect to `/login` |
-
----
-
-## Key rules
-
-1. **Screen never calls API directly** — always through a provider
-2. **Provider holds state** — use `AsyncValue<T>` (loading/error/data)
-3. **One provider per feature** — auth, timeline, tweet, profile, notifications, search
-4. **Endpoints as constants** — no raw URL strings in screens
-5. **Models with fromJson** — exactly matching backend response (camelCase or snake_case based on backend)
-6. **No global state** — inject via Riverpod `ref.read()` / `ref.watch()`
+1. Экран не дёргает Dio/datasource — только Bloc/Cubit → (usecase|repository).
+2. `domain/` чистый: ни Flutter, ни dio, ни dto.
+3. DTO ↔ Entity только через mappers; DTO не покидает `data/`.
+4. Импорт чужой фичи — только её `domain/`.
+5. Любой список с cursor — наследник `PaginatedBloc`, не своя реализация.
+6. Сущности с кэшем (Tweet, User) читаются виджетами через `watch*` стримы репозитория, а не копируются в состояния нескольких Bloc'ов.
+7. Usecase создаётся только при наличии оркестрации/правил; пустые пробросы запрещены.
+8. WM появляется при 2+ Bloc'ах или локальном UI-стейте; бизнес-логики в WM нет.
+9. Владение = ответственность за dispose: Scope диспозит свои Bloc'и/сторы, WM — свои Notifier'ы/подписки/эпизодические Cubit'ы.
+10. Мутации твита — оптимистичные: store обновляется до ответа сервера, откат при ошибке (в usecase).
+11. Без кодогенерации и freezed; equality — `equatable`, json — руками.
+12. Тесты зеркалят `lib/`; обязательные: single-flight refresh, `PaginatedBloc` (двойной loadMore, refresh во время loadMore), откат оптимистичного лайка, redirect-матрица роутера.

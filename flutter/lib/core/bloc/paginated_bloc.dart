@@ -1,0 +1,126 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+import '../result/result.dart';
+import '../error/failures.dart';
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+abstract class PaginatedEvent extends Equatable {
+  const PaginatedEvent();
+  @override
+  List<Object?> get props => [];
+}
+
+class PaginatedRequested extends PaginatedEvent {
+  const PaginatedRequested();
+}
+
+class PaginatedLoadMoreRequested extends PaginatedEvent {
+  const PaginatedLoadMoreRequested();
+}
+
+class PaginatedRefreshRequested extends PaginatedEvent {
+  const PaginatedRefreshRequested();
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+final class PaginatedState<T> extends Equatable {
+  const PaginatedState({
+    this.items = const [],
+    this.cursor,
+    this.hasMore = true,
+    this.isLoading = false,
+    this.isLoadingMore = false,
+    this.failure,
+  });
+
+  final List<T> items;
+  final String? cursor;
+  final bool hasMore;
+  final bool isLoading;
+  final bool isLoadingMore;
+  final Failure? failure;
+
+  bool get hasData => items.isNotEmpty;
+  bool get hasError => failure != null;
+  bool get isInitial => !isLoading && !hasData && !hasError;
+
+  PaginatedState<T> copyWith({
+    List<T>? items,
+    String? Function()? cursor,
+    bool? hasMore,
+    bool? isLoading,
+    bool? isLoadingMore,
+    Failure? Function()? failure,
+  }) =>
+      PaginatedState<T>(
+        items: items ?? this.items,
+        cursor: cursor != null ? cursor() : this.cursor,
+        hasMore: hasMore ?? this.hasMore,
+        isLoading: isLoading ?? this.isLoading,
+        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+        failure: failure != null ? failure() : this.failure,
+      );
+
+  @override
+  List<Object?> get props => [items, cursor, hasMore, isLoading, isLoadingMore, failure];
+}
+
+// ── Bloc ──────────────────────────────────────────────────────────────────────
+
+typedef PageResult<T> = Future<Result<({List<T> items, String? nextCursor})>>;
+
+abstract class PaginatedBloc<T> extends Bloc<PaginatedEvent, PaginatedState<T>> {
+  PaginatedBloc() : super(PaginatedState<T>()) {
+    on<PaginatedRequested>(_onRequested);
+    on<PaginatedLoadMoreRequested>(
+      _onLoadMore,
+      transformer: _droppable(),
+    );
+    on<PaginatedRefreshRequested>(_onRefresh);
+  }
+
+  /// Наследник реализует только этот метод.
+  PageResult<T> fetchPage(String? cursor);
+
+  Future<void> _onRequested(PaginatedRequested _, Emitter<PaginatedState<T>> emit) async {
+    emit(state.copyWith(isLoading: true, failure: () => null));
+    await _load(null, emit, append: false);
+  }
+
+  Future<void> _onLoadMore(PaginatedLoadMoreRequested _, Emitter<PaginatedState<T>> emit) async {
+    if (!state.hasMore || state.isLoadingMore || state.isLoading) return;
+    emit(state.copyWith(isLoadingMore: true));
+    await _load(state.cursor, emit, append: true);
+  }
+
+  Future<void> _onRefresh(PaginatedRefreshRequested _, Emitter<PaginatedState<T>> emit) async {
+    emit(state.copyWith(isLoading: true, failure: () => null));
+    await _load(null, emit, append: false);
+  }
+
+  Future<void> _load(String? cursor, Emitter<PaginatedState<T>> emit, {required bool append}) async {
+    final result = await fetchPage(cursor);
+    switch (result) {
+      case Ok(:final value):
+        emit(state.copyWith(
+          items: append ? [...state.items, ...value.items] : value.items,
+          cursor: () => value.nextCursor,
+          hasMore: value.nextCursor != null,
+          isLoading: false,
+          isLoadingMore: false,
+          failure: () => null,
+        ));
+      case Err(:final failure):
+        emit(state.copyWith(
+          isLoading: false,
+          isLoadingMore: false,
+          failure: () => failure,
+        ));
+    }
+  }
+
+  EventTransformer<PaginatedLoadMoreRequested> _droppable() =>
+      (events, mapper) => events.where((_) => !state.isLoadingMore).asyncExpand(mapper);
+}
