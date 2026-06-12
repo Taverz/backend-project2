@@ -1,7 +1,7 @@
 abstract final class Validators {
   static String? email(String? value) {
     if (value == null || value.isEmpty) return 'Введите email';
-    final re = RegExp(r'^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$');
+    final re = RegExp(r'^[\w.+-]+@([\w-]+\.)+[a-zA-Z]{2,}$');
     if (!re.hasMatch(value)) return 'Неверный формат email';
     return null;
   }
