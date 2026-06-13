@@ -1,0 +1,15 @@
+{
+  "promptDelete": true,
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "relative",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "_attachments",
+  "userIgnoreFilters": [
+    "node_modules/",
+    "build/",
+    ".dart_tool/",
+    "ios/",
+    "android/",
+    "web/"
+  ]
+}

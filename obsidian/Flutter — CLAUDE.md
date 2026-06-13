@@ -1,0 +1,1 @@
+../flutter/CLAUDE.md

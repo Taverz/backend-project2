@@ -1,0 +1,18 @@
+# Obsidian workspace state — меняется при каждом открытии vault'а, шум в diff
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspace.json.bak
+
+# Кэш плагинов (создаётся ими в runtime)
+.obsidian/plugins/*/data.json
+.obsidian/plugins/*/.cache
+
+# Локальные snippets и личные настройки темы
+.obsidian/snippets/*.css
+.obsidian/themes/
+
+# Attachments — если нужны в git, удали эту строку
+_attachments/
+
+# Backup'ы
+.trash/
