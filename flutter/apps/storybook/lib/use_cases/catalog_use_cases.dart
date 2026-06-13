@@ -8,10 +8,19 @@ import 'package:widgetbook/widgetbook.dart';
 /// Используются как «оглавление» — быстро найти нужный компонент глазами.
 
 final catalogUseCases = <WidgetbookUseCase>[
-  WidgetbookUseCase(name: 'All Primitives', builder: (_) => const _AllPrimitives()),
-  WidgetbookUseCase(name: 'All Composites', builder: (_) => const _AllComposites()),
+  WidgetbookUseCase(
+    name: 'All Primitives',
+    builder: (_) => const _AllPrimitives(),
+  ),
+  WidgetbookUseCase(
+    name: 'All Composites',
+    builder: (_) => const _AllComposites(),
+  ),
   WidgetbookUseCase(name: 'Color tokens', builder: (_) => const _ColorTokens()),
-  WidgetbookUseCase(name: 'Typography', builder: (_) => const _TypographyCatalog()),
+  WidgetbookUseCase(
+    name: 'Typography',
+    builder: (_) => const _TypographyCatalog(),
+  ),
 ];
 
 // ── Catalog views ────────────────────────────────────────────────────────────
@@ -27,7 +36,9 @@ class _AllPrimitives extends StatelessWidget {
           name: 'AppButton (primary / secondary / disabled / loading)',
           child: Row(
             children: [
-              Expanded(child: AppButton(label: 'Войти', onPressed: () {})),
+              Expanded(
+                child: AppButton(label: 'Войти', onPressed: () {}),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: AppButton(
@@ -61,10 +72,7 @@ class _AllPrimitives extends StatelessWidget {
             children: [
               const AppTextField(label: 'Email'),
               const SizedBox(height: 12),
-              const AppTextField(
-                label: 'Email',
-                errorText: 'Неверный формат',
-              ),
+              const AppTextField(label: 'Email', errorText: 'Неверный формат'),
               const SizedBox(height: 12),
               const AppTextField(label: 'Email', enabled: false),
               const SizedBox(height: 12),
@@ -115,8 +123,7 @@ class _AllPrimitives extends StatelessWidget {
           child: Center(
             child: AppButton(
               label: 'Показать snack',
-              onPressed: () =>
-                  AppSnackBar.show(context, message: 'Сохранено'),
+              onPressed: () => AppSnackBar.show(context, message: 'Сохранено'),
             ),
           ),
         ),
@@ -135,10 +142,7 @@ class _AllComposites extends StatelessWidget {
         _Section(
           name: 'ErrorView (с retry)',
           height: 200,
-          child: ErrorView(
-            message: 'Что-то пошло не так',
-            onRetry: () {},
-          ),
+          child: ErrorView(message: 'Что-то пошло не так', onRetry: () {}),
         ),
         _Section(
           name: 'EmptyView',

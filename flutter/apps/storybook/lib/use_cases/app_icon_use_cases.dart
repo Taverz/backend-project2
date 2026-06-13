@@ -34,4 +34,34 @@ final appIconUseCases = <WidgetbookUseCase>[
       ),
     ),
   ),
+  WidgetbookUseCase(
+    name: '🎛️ Interactive (knobs)',
+    builder: (context) {
+      final icons = <(String, SvgGenImage)>[
+        ('eyeOpen', AppIcons.eyeOpen),
+        ('eyeClosed', AppIcons.eyeClosed),
+        ('errorOutline', AppIcons.errorOutline),
+        ('inboxOutline', AppIcons.inboxOutline),
+      ];
+      final pick = context.knobs.object.dropdown(
+        label: 'icon',
+        options: icons,
+        labelBuilder: (e) => e.$1,
+        initialOption: icons.first,
+      );
+      final size = context.knobs.double.slider(
+        label: 'size',
+        initialValue: 24,
+        min: 12,
+        max: 96,
+      );
+      final color = context.knobs.color(
+        label: 'color',
+        initialValue: AppColors.textPrimary,
+      );
+      return Center(
+        child: AppIcon(pick.$2, size: size, color: color),
+      );
+    },
+  ),
 ];

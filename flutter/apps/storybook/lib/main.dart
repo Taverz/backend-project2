@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:widgetbook/widgetbook.dart';
 
+import 'addons/background_addon.dart';
 import 'use_cases/app_app_bar_use_cases.dart';
 import 'use_cases/app_button_use_cases.dart';
 import 'use_cases/app_icon_use_cases.dart';
 import 'use_cases/app_loader_use_cases.dart';
 import 'use_cases/app_snack_bar_use_cases.dart';
 import 'use_cases/app_text_field_use_cases.dart';
+import 'use_cases/avatar_use_cases.dart';
 import 'use_cases/catalog_use_cases.dart';
 import 'use_cases/empty_view_use_cases.dart';
 import 'use_cases/error_view_use_cases.dart';
+import 'use_cases/skeleton_use_cases.dart';
 import 'use_cases/templates_use_cases.dart';
 
 void main() => runApp(const StorybookApp());
@@ -34,37 +37,28 @@ class StorybookApp extends StatelessWidget {
           themeBuilder: (context, theme, child) =>
               Theme(data: theme, child: child),
         ),
+        BackgroundAddon(),
       ],
       directories: [
-        WidgetbookComponent(
-          name: 'Main',
-          useCases: catalogUseCases,
-        ),
+        WidgetbookComponent(name: 'Main', useCases: catalogUseCases),
         WidgetbookCategory(
           name: '⚛️ Atoms',
           children: [
-            WidgetbookComponent(
-              name: 'AppButton',
-              useCases: appButtonUseCases,
-            ),
+            WidgetbookComponent(name: 'AppButton', useCases: appButtonUseCases),
             WidgetbookComponent(
               name: 'AppTextField',
               useCases: appTextFieldUseCases,
             ),
             WidgetbookComponent(name: 'AppIcon', useCases: appIconUseCases),
-            WidgetbookComponent(
-              name: 'AppLoader',
-              useCases: appLoaderUseCases,
-            ),
+            WidgetbookComponent(name: 'AppLoader', useCases: appLoaderUseCases),
+            WidgetbookComponent(name: 'Skeleton', useCases: skeletonUseCases),
           ],
         ),
         WidgetbookCategory(
           name: '🧬 Molecules',
           children: [
-            WidgetbookComponent(
-              name: 'AppAppBar',
-              useCases: appAppBarUseCases,
-            ),
+            WidgetbookComponent(name: 'Avatar', useCases: avatarUseCases),
+            WidgetbookComponent(name: 'AppAppBar', useCases: appAppBarUseCases),
             WidgetbookComponent(
               name: 'AppSnackBar',
               useCases: appSnackBarUseCases,
@@ -74,14 +68,8 @@ class StorybookApp extends StatelessWidget {
         WidgetbookCategory(
           name: '🦠 Organisms',
           children: [
-            WidgetbookComponent(
-              name: 'ErrorView',
-              useCases: errorViewUseCases,
-            ),
-            WidgetbookComponent(
-              name: 'EmptyView',
-              useCases: emptyViewUseCases,
-            ),
+            WidgetbookComponent(name: 'ErrorView', useCases: errorViewUseCases),
+            WidgetbookComponent(name: 'EmptyView', useCases: emptyViewUseCases),
           ],
         ),
         WidgetbookCategory(

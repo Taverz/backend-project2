@@ -3,6 +3,7 @@ import 'package:ui_kit/ui_kit.dart';
 import 'package:widgetbook/widgetbook.dart';
 
 final appButtonUseCases = <WidgetbookUseCase>[
+  // ── Статичные варианты — быстрый обзор основных состояний ────────────────
   WidgetbookUseCase(
     name: 'Primary',
     builder: (_) => _Wrap(
@@ -35,6 +36,36 @@ final appButtonUseCases = <WidgetbookUseCase>[
     builder: (_) => _Wrap(
       child: AppTextButton(label: 'Нет аккаунта?', onPressed: () {}),
     ),
+  ),
+
+  // ── Interactive — все props через knobs ──────────────────────────────────
+  WidgetbookUseCase(
+    name: '🎛️ Interactive (knobs)',
+    builder: (context) {
+      final label = context.knobs.string(label: 'label', initialValue: 'Войти');
+      final kind = context.knobs.object.dropdown<AppButtonKind>(
+        label: 'kind',
+        options: AppButtonKind.values,
+        labelBuilder: (k) => k.name,
+        initialOption: AppButtonKind.primary,
+      );
+      final isLoading = context.knobs.boolean(
+        label: 'isLoading',
+        initialValue: false,
+      );
+      final enabled = context.knobs.boolean(
+        label: 'enabled',
+        initialValue: true,
+      );
+      return _Wrap(
+        child: AppButton(
+          label: label,
+          kind: kind,
+          isLoading: isLoading,
+          onPressed: enabled ? () {} : null,
+        ),
+      );
+    },
   ),
 ];
 

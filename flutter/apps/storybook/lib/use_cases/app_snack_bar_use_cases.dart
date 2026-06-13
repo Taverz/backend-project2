@@ -3,9 +3,29 @@ import 'package:ui_kit/ui_kit.dart';
 import 'package:widgetbook/widgetbook.dart';
 
 final appSnackBarUseCases = <WidgetbookUseCase>[
+  WidgetbookUseCase(name: 'Trigger', builder: (_) => const _SnackTrigger()),
   WidgetbookUseCase(
-    name: 'Trigger',
-    builder: (_) => const _SnackTrigger(),
+    name: '🎛️ Interactive (knobs)',
+    builder: (context) {
+      final message = context.knobs.string(
+        label: 'message',
+        initialValue: 'Сохранено',
+      );
+      final isError = context.knobs.boolean(
+        label: 'isError',
+        initialValue: false,
+      );
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: AppButton(
+            label: 'Показать snack',
+            onPressed: () =>
+                AppSnackBar.show(context, message: message, isError: isError),
+          ),
+        ),
+      );
+    },
   ),
 ];
 
@@ -20,10 +40,7 @@ class _SnackTrigger extends StatelessWidget {
       children: [
         AppButton(
           label: 'Показать info-snack',
-          onPressed: () => AppSnackBar.show(
-            context,
-            message: 'Сохранено',
-          ),
+          onPressed: () => AppSnackBar.show(context, message: 'Сохранено'),
         ),
         const SizedBox(height: 16),
         AppButton(

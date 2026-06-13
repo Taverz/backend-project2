@@ -12,6 +12,63 @@
         "APP_ENV": "development",
         "HTTP_PORT": "8080"
       }
+    },
+    {
+      "name": "chirp · debug",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/flutter/apps/chirp/lib/main.dart",
+      "cwd": "${workspaceFolder}/flutter/apps/chirp",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--dart-define=API_URL=http://localhost:8080",
+        "--dart-define=APP_ENV=dev"
+      ]
+    },
+    {
+      "name": "chirp · profile",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/flutter/apps/chirp/lib/main.dart",
+      "cwd": "${workspaceFolder}/flutter/apps/chirp",
+      "flutterMode": "profile",
+      "toolArgs": [
+        "--dart-define=API_URL=http://localhost:8080",
+        "--dart-define=APP_ENV=dev"
+      ]
+    },
+    {
+      "name": "chirp · mock (offline, без бэка)",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/flutter/apps/chirp/lib/main.dart",
+      "cwd": "${workspaceFolder}/flutter/apps/chirp",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--dart-define=USE_MOCK_API=true",
+        "--dart-define=APP_ENV=mock"
+      ]
+    },
+    {
+      "name": "chirp · debug + qa_tools overlay",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/flutter/apps/chirp/lib/main.dart",
+      "cwd": "${workspaceFolder}/flutter/apps/chirp",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--dart-define=API_URL=http://localhost:8080",
+        "--dart-define=APP_ENV=dev"
+      ]
+    },
+    {
+      "name": "storybook · web (debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "${workspaceFolder}/flutter/apps/storybook/lib/main.dart",
+      "cwd": "${workspaceFolder}/flutter/apps/storybook",
+      "deviceId": "chrome",
+      "flutterMode": "debug"
     }
   ]
 }

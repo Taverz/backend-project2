@@ -14,10 +14,7 @@ final appTextFieldUseCases = <WidgetbookUseCase>[
     name: 'With error',
     builder: (_) => const Padding(
       padding: EdgeInsets.all(24),
-      child: AppTextField(
-        label: 'Email',
-        errorText: 'Неверный формат email',
-      ),
+      child: AppTextField(label: 'Email', errorText: 'Неверный формат email'),
     ),
   ),
   WidgetbookUseCase(
@@ -40,5 +37,35 @@ final appTextFieldUseCases = <WidgetbookUseCase>[
         ),
       ),
     ),
+  ),
+  WidgetbookUseCase(
+    name: '🎛️ Interactive (knobs)',
+    builder: (context) {
+      final label = context.knobs.stringOrNull(
+        label: 'label',
+        initialValue: 'Email',
+      );
+      final errorText = context.knobs.stringOrNull(
+        label: 'errorText',
+        defaultToNull: true,
+      );
+      final obscureText = context.knobs.boolean(
+        label: 'obscureText',
+        initialValue: false,
+      );
+      final enabled = context.knobs.boolean(
+        label: 'enabled',
+        initialValue: true,
+      );
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: AppTextField(
+          label: label,
+          errorText: errorText,
+          obscureText: obscureText,
+          enabled: enabled,
+        ),
+      );
+    },
   ),
 ];
