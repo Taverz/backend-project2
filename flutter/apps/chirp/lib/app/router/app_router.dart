@@ -19,7 +19,7 @@ GoRouter buildRouter(SessionController session) => GoRouter(
     if (s is SessionUnknown) return Routes.splash;
 
     if (s is SessionUnauthenticated) {
-      final publicPaths = [Routes.login, Routes.register, Routes.splash];
+      final publicPaths = [Routes.login, Routes.register];
       if (!publicPaths.contains(path)) return Routes.login;
     }
 

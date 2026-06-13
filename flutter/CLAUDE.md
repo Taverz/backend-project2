@@ -95,7 +95,7 @@ RemoteDataSource (app_api)  →  Repository (фича)  →  UseCase (фича)
 13. Навигация (`context.go`) — на экране, не в Bloc/VM.
 14. DI в ScopeHolder — `initState` + `AppScope.read(context)` (lookup без подписки).
 15. **Sentry инициализируется через `SentrySetup.bootstrap(runApp)`** в `main.dart`; ничего другого в `main.dart` нет.
-16. **Debug-overlay через `qa_tools_flutter` (`FlutterLens`)** — обёртка `MaterialApp.router` в `ChirpApp`. Включается только в `kDebugMode`.
+16. **Debug-overlay через `qa_tools_flutter` (`FlutterLens`)** — обёртка `MaterialApp.router` в `ChirpApp`. Включается по флагу `--dart-define=QA_TOOLS=true` (launch-конфиг `chirp · debug + qa_tools overlay`); без флага оверлей не подключается даже в debug.
 17. **Для каждого endpoint API — JSON-фикстуры `request`+`response` в `packages/app_api/fixtures/<feature>/`.** Используются: (а) тестами через `FixtureLoader.loadJson(...)`, (б) `MockAppApiClient` для оффлайн-режима (`--dart-define=USE_MOCK_API=true`), (в) как документация контракта в git. Подробности — `packages/app_api/README.md`.
 18. **`fixtures/<endpoint>_response.json` обновляются с живого бэка** через `dart run packages/app_api/tool/refresh_fixtures.dart --api-url=... [--only=auth/login]`. `<endpoint>_request.json` редактируется руками — это эталонный вход. Новые ручки регистрировать в `_endpoints` каталоге скрипта.
 19. **Storybook (`apps/storybook`) обёрнут в `FlutterLens` так же, как chirp** — debug-инспектор виджетов ui_kit доступен без основного приложения.

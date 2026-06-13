@@ -58,7 +58,8 @@
       "flutterMode": "debug",
       "toolArgs": [
         "--dart-define=API_URL=http://localhost:8080",
-        "--dart-define=APP_ENV=dev"
+        "--dart-define=APP_ENV=dev",
+        "--dart-define=QA_TOOLS=true"
       ]
     },
     {

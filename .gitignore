@@ -25,3 +25,7 @@ vendor/
 
 # Backup files
 *.bak
+
+flutter/apps/chirp/build
+flutter/packages/ui_kit/build
+flutter/packages/app_api/build
