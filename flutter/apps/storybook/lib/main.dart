@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:qa_tools_flutter/flutter_debug_tools.dart';
 import 'package:ui_kit/ui_kit.dart';
 import 'package:widgetbook/widgetbook.dart';
 
+import 'use_cases/app_app_bar_use_cases.dart';
 import 'use_cases/app_button_use_cases.dart';
-import 'use_cases/app_text_field_use_cases.dart';
 import 'use_cases/app_icon_use_cases.dart';
 import 'use_cases/app_loader_use_cases.dart';
-import 'use_cases/app_app_bar_use_cases.dart';
 import 'use_cases/app_snack_bar_use_cases.dart';
-import 'use_cases/error_view_use_cases.dart';
+import 'use_cases/app_text_field_use_cases.dart';
+import 'use_cases/catalog_use_cases.dart';
 import 'use_cases/empty_view_use_cases.dart';
+import 'use_cases/error_view_use_cases.dart';
 
 void main() => runApp(const StorybookApp());
 
@@ -19,12 +19,11 @@ class StorybookApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // FlutterLens оборачивает Widgetbook — overlay debug-tools доступен
-    // прямо в storybook, чтобы можно было инспектировать виджеты ui_kit
-    // (размеры, рендер-боксы, цвета пикселей) без основного приложения.
-    return FlutterLens(
-      builder: (context, _, __) => _buildWidgetbook(context),
-    );
+    // FlutterLens оборачивал Widgetbook overlay'ом, но он мешал routing'у
+    // widgetbook'а (canvas оставался пуст при выборе use-case'а). Если нужен
+    // debug-инспектор в storybook — вернуть `FlutterLens(builder: (c, _, __) =>
+    // _buildWidgetbook(c))` после проверки совместимости версий.
+    return _buildWidgetbook(context);
   }
 
   Widget _buildWidgetbook(BuildContext context) {
@@ -40,6 +39,10 @@ class StorybookApp extends StatelessWidget {
         ),
       ],
       directories: [
+        WidgetbookComponent(
+          name: 'Main',
+          useCases: catalogUseCases,
+        ),
         WidgetbookCategory(
           name: 'Primitives',
           children: [
