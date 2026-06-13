@@ -64,7 +64,7 @@ test/
 
 ## Текущее покрытие
 
-### unit/core/ — 42 теста
+### unit/core/ — актуально по `flutter test` (на 2026-06-13: 115 тестов всего)
 
 | Файл | Тестов | Что проверяет |
 |------|--------|--------------|
@@ -180,13 +180,42 @@ test('fromDto создаёт корректный entity из реального
 
 ### Repository — пример
 
+`RepositoryImpl` бросает `Failure` (никакого `Result<T>`). Тест проверяет через `throwsA`:
+
 ```dart
-test('возвращает Err<NetworkFailure> при NetworkException', () async {
+test('бросает NetworkFailure при NetworkException', () {
   when(() => mockDataSource.getTweet('123')).thenThrow(const NetworkException());
-  final result = await repository.getById('123');
-  expect(result, isA<Err<Tweet>>());
-  expect((result as Err).failure, isA<NetworkFailure>());
+  expect(
+    () => repository.getById('123'),
+    throwsA(isA<NetworkFailure>()),
+  );
 });
+
+test('возвращает Tweet при успехе', () async {
+  when(() => mockDataSource.getTweet('123')).thenAnswer((_) async => kTweetDto);
+  final tweet = await repository.getById('123');
+  expect(tweet.id, '123');
+});
+```
+
+### Bloc — пример
+
+UseCase / repo бросает `Failure` — Bloc эмитит `XxxFailure` state. Мок настраиваем через `thenThrow`:
+
+```dart
+blocTest<LoginBloc, LoginState>(
+  'usecase бросает Failure → FailureState',
+  build: () {
+    when(() => useCase(email: any(named: 'email'), password: any(named: 'password')))
+        .thenThrow(const ValidationFailure('boom'));
+    return LoginBloc(useCase);
+  },
+  act: (bloc) => bloc.add(const LoginSubmitted(email: 'e@e.com', password: 'pass1234')),
+  expect: () => [
+    isA<LoginInProgress>(),
+    isA<LoginFailureState>().having((s) => s.failure, 'failure', isA<ValidationFailure>()),
+  ],
+);
 ```
 
 ---

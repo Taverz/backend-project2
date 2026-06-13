@@ -1,0 +1,12 @@
+include: ../../analysis_options.yaml
+
+# ui_kit — дизайн-система, ей разрешено использовать material/cupertino:
+# она ОБЯЗАНА оборачивать Material-виджеты, чтобы экраны не лезли в Material сами.
+analyzer:
+  exclude:
+    - 'lib/gen/**'    # flutter_gen-вывод
+
+linter:
+  rules:
+    # ui_kit не должен зависеть от Bloc/Riverpod и т.п. — это чистая UI-библиотека.
+    # (Правил Dart-линтера для этого нет, проверяется ревью.)

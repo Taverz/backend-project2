@@ -1,0 +1,27 @@
+name: app_api
+description: |
+  Chirp HTTP API client. Содержит абстрактные интерфейсы сервисов
+  (зеркало swagger бэкенда) и Dio-реализации. В будущем может быть
+  заменено на chopper-кодоген — интерфейсы при этом не изменятся.
+publish_to: 'none'
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.7.0
+  equatable: ^2.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  flutter_lints: ^4.0.0
+
+flutter:
+  assets:
+    - fixtures/auth/

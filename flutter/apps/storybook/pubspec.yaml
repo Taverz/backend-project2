@@ -1,0 +1,26 @@
+name: storybook
+description: Chirp UI kit Storybook (widgetbook)
+publish_to: 'none'
+version: 0.1.0+1
+resolution: workspace
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+  widgetbook: ^3.11.0
+  widgetbook_annotation: ^3.5.0
+  ui_kit:
+    path: ../../packages/ui_kit
+  qa_tools_flutter:
+    path: ../../packages/qa_tools_flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

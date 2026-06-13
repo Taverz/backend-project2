@@ -1,0 +1,151 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+
+class PixelColorInspector extends StatefulWidget {
+  final bool isEnabled;
+  final void Function(Color) onColorPicked;
+  final Widget child;
+  const PixelColorInspector({
+    super.key,
+    required this.isEnabled,
+    required this.child,
+    required this.onColorPicked,
+  });
+
+  @override
+  State<PixelColorInspector> createState() => _PixelColorInspectorState();
+}
+
+class _PixelColorInspectorState extends State<PixelColorInspector> {
+  final GlobalKey _repaintBoundaryKey = GlobalKey();
+  ui.Image? _image;
+  Color? _selectedColor;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _captureImage());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PixelColorInspector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isEnabled && widget.isEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _captureImage());
+    }
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _captureImage() async {
+    final context = _repaintBoundaryKey.currentContext;
+    if (context == null) {
+      return;
+    }
+
+    final boundary = context.findRenderObject();
+    if (boundary is! RenderRepaintBoundary) {
+      return;
+    }
+
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final image = await boundary.toImage(pixelRatio: pixelRatio);
+    _image?.dispose();
+    _image = image;
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
+  Color? getPixelFromByteData(
+    ByteData byteData, {
+    required int width,
+    required int x,
+    required int y,
+  }) {
+    final index = (y * width + x) * 4;
+
+    if (index + 3 < byteData.lengthInBytes) {
+      // Ensure we're not reading past the end of the ByteData buffer
+      final r = byteData.getUint8(index);
+      final g = byteData.getUint8(index + 1);
+      final b = byteData.getUint8(index + 2);
+      final a = byteData.getUint8(index + 3);
+
+      return Color.fromARGB(a, r, g, b);
+    } else {
+      // Handle the error or ignore
+      debugPrint("Error: Attempted to read outside the ByteData buffer.");
+      return null;
+    }
+  }
+
+  Future<void> _showPixelColor(Offset globalPosition) async {
+    if (!widget.isEnabled) return;
+
+    if (_image == null) {
+      await _captureImage();
+    }
+
+    if (!mounted) return;
+
+    if (_image == null) return;
+
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+
+    final boundary = _repaintBoundaryKey.currentContext?.findRenderObject();
+    if (boundary is! RenderRepaintBoundary) {
+      return;
+    }
+
+    var offset = boundary.globalToLocal(globalPosition);
+
+    offset *= pixelRatio;
+
+    final int pixelX = offset.dx.round();
+    final int pixelY = offset.dy.round();
+
+    if (pixelX < 0 || pixelY < 0 || pixelX >= _image!.width || pixelY >= _image!.height) {
+      // Coordinates are outside the bounds of the image
+      return;
+    }
+
+    final ByteData? byteData = await _image!.toByteData(format: ui.ImageByteFormat.rawRgba);
+
+    setState(() {
+      if (byteData != null) {
+        _selectedColor = getPixelFromByteData(byteData, width: _image?.width ?? 0, x: pixelX, y: pixelY);
+      }
+    });
+
+    final color = _selectedColor;
+    if (color != null) {
+      widget.onColorPicked(color);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: widget.isEnabled ? HitTestBehavior.translucent : HitTestBehavior.deferToChild,
+      onPointerUp: widget.isEnabled ? (e) => _showPixelColor(e.position) : null,
+      child: IgnorePointer(
+        ignoring: widget.isEnabled,
+        child: RepaintBoundary(
+          key: _repaintBoundaryKey,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}

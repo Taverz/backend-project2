@@ -57,8 +57,8 @@
 | Entities с бизнес-полями и `equatable` | Импорт `dio`, `flutter/*`, любых dto |
 | Абстрактные репозитории (`abstract interface class`) | Методы, возвращающие `Response`, `Map<String, dynamic>` |
 | Usecases с реальной оркестрацией | JSON-парсинг (`fromJson` — это data) |
-| Типы из `core/result`, `core/error/failures` | Знание про HTTP-коды, заголовки, пагинационные курсоры бэкенда* |
-| `Stream<T>` / `Future<Result<T>>` в сигнатурах | `BuildContext`, навигация, SnackBar |
+| Типы из `core/error/failures` (бросаются через `throw`) | Знание про HTTP-коды, заголовки, пагинационные курсоры бэкенда* |
+| `Stream<T>` / `Future<T>` в сигнатурах; ошибки — через исключения | `BuildContext`, навигация, SnackBar; `Result<T>` (не используем) |
 
 \* курсор как непрозрачный `String? cursor` в контракте — допустимо; знание его формата — нет.
 
@@ -69,21 +69,22 @@
 | ✅ Можно | ❌ Нельзя |
 |---------|----------|
 | Dio, dto, `jsonDecode`, заголовки, коды | Импорт чего-либо из `presentation/` |
-| `RepositoryImpl` ловит exceptions → `Err(Failure)` | Пробрасывать `DioException` наружу из репозитория |
+| `RepositoryImpl` ловит инфраструктурные exceptions и `throw Failure` | Пробрасывать `DioException`/`ApiException` наружу из репозитория |
 | Store (in-memory кэш) для shared-сущностей | Бизнес-правила (валидация, оркестрация — это domain) |
 | Mappers как чистые функции/статические методы | Возвращать dto из публичных методов репозитория |
 
-**Правило одного выхода:** наружу из `data/` выходят только entities и `Result`. Dto и исключения умирают внутри.
+**Правило одного выхода:** наружу из `data/` выходят только entities (через return) и `Failure` (через throw). Dto и инфраструктурные исключения умирают внутри.
 
 ### presentation/ — «как это выглядит и реагирует»
 
 | ✅ Можно | ❌ Нельзя |
 |---------|----------|
-| Bloc/Cubit зовут usecase или репозиторий (контракт) | Bloc создаёт Dio / datasource / `RepositoryImpl` сам |
+| Bloc зовёт usecase или репозиторий (контракт), ловит `Failure` через `try/catch` | Bloc создаёт Dio / datasource / `RepositoryImpl` сам |
 | WM комбинирует Bloc'и, держит `ValueNotifier` | WM зовёт репозиторий/usecase напрямую |
 | Виджет читает зависимости из Scope | Виджет зовёт репозиторий, минуя Bloc |
+| Локальный стейт формы — `StatefulWidget` + `ValueNotifier` + миксин валидации | Cubit ради bool/формы (Cubit на проекте не используем) |
 | Навигация через `context.go/push` в обработчиках экрана/WM | Навигация внутри Bloc'а |
-| `BlocListener` → SnackBar/диалог | Показ UI из Cubit'а (`showDialog` внутри Cubit) |
+| `BlocListener` → SnackBar/диалог | Показ UI из Bloc'а (`showDialog` внутри Bloc) |
 
 **Правило про навигацию:** Bloc эмитит состояние («твит создан»), экран/WM на него реагирует переходом. Bloc не знает о роутере.
 
@@ -125,7 +126,7 @@ result, базовый Bloc)?                                 → core/
 | Store | `XxxStore` | `tweet_store.dart` | `TweetStore` |
 | UseCase | `ГлаголXxxUseCase` | `toggle_like_usecase.dart` | `ToggleLikeUseCase`, `PostTweetUseCase` |
 | Bloc | `XxxBloc` (+Event/State) | `timeline_bloc.dart` | `TimelineBloc` |
-| Cubit | `XxxCubit` | `login_form_cubit.dart` | `LoginFormCubit` |
+| Mixin | `XxxMixin` | `auth_form_validation_mixin.dart` | `AuthFormValidationMixin` |
 | WM | `XxxWm` | `tweet_detail_wm.dart` | `TweetDetailWm` |
 | Scope | `XxxScope` + `XxxScopeHolder` | `home_scope.dart` | `HomeScope.of(context)` |
 | Экран | `XxxScreen` | `profile_screen.dart` | `ProfileScreen` |
@@ -165,7 +166,7 @@ TimelineState
 | Repository | `get/watch/create/update/delete + сущность` | `getTimelinePage`, `watchTweet` |
 | UseCase | единственный метод `call()` или `execute()` — один на проект (у нас `call`) | `toggleLikeUseCase(tweetId)` |
 | WM, обработчики UI | `on + Что + Действие` | `onLikeTap`, `onScrollEnd`, `onRetryPressed` |
-| Cubit, мутации | глагол | `updateQuery`, `togglePasswordVisibility` |
+| Виджет (private методы State) | `_on + Что` | `_onSubmit`, `_onTogglePassword` |
 | Store | `put / putAll / get / watch / remove` | `tweetStore.put(tweet)` |
 
 ### Нейминг тестов
@@ -177,23 +178,28 @@ TimelineState
 
 ## 4. Выбор инструмента состояния
 
+Принцип: **Bloc — только для внешнего взаимодействия** (API, БД, сервисы). Всё, что можно сделать внутри виджета — делаем внутри виджета. Cubit на проекте не используем.
+
 ```
-Состояние нужно ТОЛЬКО одному виджету и оно тривиально
-(открыт/закрыт, видимость пароля)?
-  → setState / ValueNotifier внутри State. Не заводить Cubit ради bool.
+Состояние локально для одного экрана/виджета — текст в инпуте,
+видимость пароля, шаг визарда, errorText поля, флаги UI?
+  → StatefulWidget + TextEditingController/ValueNotifier.
+    Переиспользуемую логику (валидация формы и т.п.) — в миксин,
+    подмешиваемый в State. ValueListenableBuilder в build().
 
-Состояние экрана, мутации простые, событий-потока нет
-(форма, фильтры, табы)?
-  → Cubit.
+Есть внешний вызов: API/БД/сервис, может быть конкуренция,
+надо различать loading/success/failure-состояния?
+  → Bloc. События — факты (`LoginSubmitted`), состояния — sealed
+    (`LoginInitial / LoginInProgress / LoginSuccess / LoginFailureState`).
+    Bloc не держит состояние формы — только статус операции.
 
-Есть поток событий, конкуренция, transformers
-(пагинация, поиск с debounce/switchMap, long-polling)?
-  → Bloc. Использовать transformers из пакета `bloc_concurrency`
-    (droppable для loadMore, restartable для поиска), а не ручные флаги.
-    PaginatedBloc использует droppable() из bloc_concurrency автоматически.
+Пагинация (cursor-based)?
+  → extends PaginatedBloc<T>. Использует droppable() из bloc_concurrency
+    автоматически. Наследник реализует только `fetchPage` и бросает
+    `Failure` при ошибке.
 
-На экране 2+ Bloc/Cubit, которым нужна координация,
-или Bloc-стримы надо смешать с локальными ValueNotifier?
+На экране 2+ Bloc'а, которым нужна координация, или Bloc-стримы
+надо смешать с локальными ValueNotifier'ами?
   → WM поверх них. Bloc'и не знают о WM и друг о друге.
 
 Состояние нужно НЕСКОЛЬКИМ экранам/фичам
@@ -202,7 +208,10 @@ TimelineState
     либо SessionController-подобный контроллер в core.
 ```
 
-Запрещено: Bloc слушает другой Bloc напрямую (`blocA.stream.listen` внутри blocB). Связь между Bloc'ами — только через WM (на одном экране) или через store/контроллер (между экранами).
+Запрещено:
+- Bloc слушает другой Bloc напрямую (`blocA.stream.listen` внутри blocB) — только через WM или store.
+- Cubit на проекте.
+- Заводить Bloc только под локальную форму без внешнего вызова — это работа виджета+миксина+ValueNotifier.
 
 ---
 
@@ -230,8 +239,9 @@ TimelineState
 1. **Кто создал — тот диспозит.** ScopeHolder закрывает свои Bloc'и и сторы в `dispose`. WM закрывает свои Notifier'ы, подписки и эпизодические Cubit'ы. Никто не закрывает чужое.
 2. **Уровень = время жизни.** Нужно всему приложению → AppScope. Нужно вкладке/ветке → FeatureScope. Нужно одному экрану → ScreenScope/State.
 3. **Scope отдаёт готовые объекты,** виджеты не собирают зависимости из кусков (`AppScope.of(context).dio` в экране — нарушение; экран берёт Bloc/WM, не сырой Dio).
-4. **`of(context)` — только в build/initState-фазе** виджетов и фабриках WM. Не передавать `BuildContext` в Bloc/usecase/репозиторий — никогда.
-5. Новая глобальная зависимость в AppScope — повод для обсуждения на ревью, а не дефолт.
+4. **DI в `initState`** через `AppScope.read(context)` (lookup без подписки). `of(context)` использовать только в `build` (с подпиской). `didChangeDependencies` для DI не использовать — он может стрельнуть повторно при смене InheritedWidget вверху.
+5. Не передавать `BuildContext` в Bloc/usecase/репозиторий — никогда.
+6. Новая глобальная зависимость в AppScope — повод для обсуждения на ревью, а не дефолт.
 
 ---
 
@@ -244,16 +254,20 @@ TimelineState
 | 3 | `Map<String, dynamic>` гуляет выше data-слоя | dto + entity |
 | 4 | Bloc слушает Bloc | WM или store |
 | 5 | `BuildContext` в Bloc/usecase | состояние + реакция на экране |
-| 6 | `showDialog`/`context.go` внутри Bloc/Cubit | `BlocListener` на экране |
+| 6 | `showDialog`/`context.go` внутри Bloc | `BlocListener` на экране |
 | 7 | Копия сущности Tweet/User в состоянии второго Bloc'а | список id + `watchTweet(id)` |
 | 8 | Своя cursor-пагинация вместо `PaginatedBloc` | наследование |
 | 9 | Usecase из одной строки `repo.method()` | прямой вызов репозитория |
-| 10 | `try { } catch (e) { print(e); }` — проглоченная ошибка | `Result` + состояние ошибки |
+| 10 | `try { } catch (e) { print(e); }` — проглоченная ошибка | `try/catch on Failure` + failure-стейт |
 | 11 | Строковый URL/route в коде фичи | `endpoints.dart` / `routes.dart` |
 | 12 | Импорт `features/x/data/...` из `features/y/...` | только `features/x/domain/...` |
 | 13 | Бизнес-логика в WM («если лайков > 0 …») | domain/Bloc; WM только координирует |
 | 14 | Глобальный синглтон / static state / GetIt | scope-дерево |
 | 15 | «Положу в core, пригодится» | в фичу; выносить при втором потребителе |
+| 16 | `Result<T>` / `Ok` / `Err` где угодно | `throw Failure` в data, `try/catch on Failure` в Bloc/UseCase |
+| 17 | `Cubit` где угодно | Bloc (если внешнее I/O) или виджет+ValueNotifier+миксин |
+| 18 | Bloc ради локальной формы без внешнего вызова | виджет+ValueNotifier+миксин |
+| 19 | DI в `didChangeDependencies` ScopeHolder'а | `initState` + `AppScope.read(context)` |
 
 ---
 

@@ -1,57 +1,24 @@
+# Базовый набор правил для всего workspace. Каждый пакет наследует его через
+# `include: ../../analysis_options.yaml` и дополняет своими ограничениями.
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
   language:
-    strict-casts: true       # запрещает неявные cast через dynamic
-    strict-raw-types: true   # запрещает raw generic типы (List вместо List<T>)
+    strict-casts: true
+    strict-raw-types: true
   errors:
     dead_code: warning
     unused_import: warning
     unused_local_variable: warning
-    missing_return: error
   exclude:
-    - lib/generated/**
     - '**/*.g.dart'
     - '**/*.freezed.dart'
+    - '**/gen/**'
 
 linter:
   rules:
-    # ── Стиль ────────────────────────────────────────────────────────────────
     prefer_single_quotes: true
     require_trailing_commas: true
     sort_child_properties_last: true
     always_declare_return_types: true
-
-    # ── Безопасность ─────────────────────────────────────────────────────────
-    unawaited_futures: true
-    avoid_dynamic_calls: true
-    avoid_void_async: true
-    cancel_subscriptions: true
-    close_sinks: true
-
-    # ── Производительность ────────────────────────────────────────────────────
-    prefer_const_constructors: true
-    prefer_const_constructors_in_immutables: true
-    prefer_const_declarations: true
-    prefer_const_literals_to_create_immutables: true
-
-    # ── Чистота кода ─────────────────────────────────────────────────────────
     avoid_print: true
-    avoid_empty_else: true
-    prefer_final_locals: true
-    prefer_final_in_for_each: true
-    unnecessary_await_in_return: true
-    unnecessary_lambdas: true
-    unnecessary_parenthesis: true
-    avoid_redundant_argument_values: true
-
-    # ── Dart/Flutter идиомы ───────────────────────────────────────────────────
-    use_super_parameters: true
-    use_colored_box: true
-    use_decorated_box: true
-    sized_box_for_whitespace: true
-    prefer_is_empty: true
-    prefer_is_not_empty: true
-
-    # ── Отключено намеренно ───────────────────────────────────────────────────
-    public_member_api_docs: false  # docs не обязательны для app-кода

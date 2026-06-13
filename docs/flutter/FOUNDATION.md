@@ -12,7 +12,6 @@
 | `core/network` | ✅ готово | `lib/core/network/` |
 | `core/session` | ✅ готово | `lib/core/session/` |
 | `core/error` | ✅ готово | `lib/core/error/` |
-| `core/result` | ✅ готово | `lib/core/result/` |
 | `core/bloc` | ✅ готово | `lib/core/bloc/` |
 | `core/wm` | ✅ готово | `lib/core/wm/` |
 | `core/theme` | ✅ готово | `lib/core/theme/` |
@@ -20,7 +19,7 @@
 | `core/utils` | ✅ готово | `lib/core/utils/` |
 | `app/` | ✅ готово | `lib/app/` |
 | `shared/` | ✅ готово | `lib/shared/` |
-| `features/` | ⬜ пусто | добавляются итеративно |
+| `features/auth/` | ✅ готово | `lib/features/auth/` — login + register |
 
 ---
 
@@ -54,15 +53,9 @@
 | Файл | Что делает |
 |------|-----------|
 | `exceptions.dart` | Инфраструктурные исключения: `ApiException`, `NetworkException`, `UnauthorizedException` |
-| `failures.dart` | Доменные ошибки: `sealed Failure` → `NetworkFailure / ServerFailure / UnauthorizedFailure / ValidationFailure / NotFoundFailure / UnknownFailure` |
+| `failures.dart` | Доменные ошибки: `sealed Failure implements Exception` → `NetworkFailure / ServerFailure / UnauthorizedFailure / ValidationFailure / NotFoundFailure / UnknownFailure` |
 
-### core/result
-
-| Файл | Что делает |
-|------|-----------|
-| `result.dart` | `sealed Result<T>`: `Ok(value) / Err(failure)` + расширения `fold / isOk / valueOrThrow` |
-
-Все методы репозиториев возвращают `Future<Result<T>>`. Исключения не выходят наружу из `data/`.
+`Failure` бросается через `throw` — `RepositoryImpl` ловит инфраструктурные исключения (`ApiException`, `NetworkException`, `UnauthorizedException`) и пробрасывает `Failure`. Никакого `Result<T>` в проекте нет — caller'ы (Bloc / UseCase) ловят через `try/catch`.
 
 ### core/bloc
 
@@ -71,7 +64,7 @@
 | `app_bloc_observer.dart` | Логирует смены состояний и ошибки Bloc'ов в debug-режиме |
 | `paginated_bloc.dart` | Абстрактный `PaginatedBloc<T>`: cursor-пагинация, droppable loadMore, refresh |
 
-`PaginatedBloc<T>` — наследники реализуют один метод `fetchPage(cursor)`. Все списки с пагинацией в проекте наследуют этот класс.
+`PaginatedBloc<T>` — наследники реализуют один метод `fetchPage(cursor)` (возвращает `({List<T> items, String? nextCursor})`, при ошибке — `throw Failure`). База ловит исключения и эмитит `failure`-стейт.
 
 Начальное состояние: `PaginatedState<T>()` (не `const PaginatedState()` — иначе тип инфeрится как `Never`).
 
@@ -105,7 +98,7 @@ WM — координатор экрана, не бизнес-логика. Со
 | Файл | Что делает |
 |------|-----------|
 | `chirp_app.dart` | `MaterialApp.router` с темой и GoRouter из `AppScope` |
-| `di/app_scope.dart` | `AppScope extends InheritedWidget`: `session, dio, prefs, router` |
+| `di/app_scope.dart` | `AppScope extends InheritedWidget`: `session, dio, prefs, router`. Два lookup'а: `of(context)` (с подпиской, в build/didChangeDependencies) и `read(context)` (без подписки, для `initState`) |
 | `di/app_scope_holder.dart` | `StatefulWidget`: инициализирует всё асинхронно, отдаёт `AppScope` |
 | `router/routes.dart` | Все пути как константы (`abstract final class Routes`) |
 | `router/app_router.dart` | GoRouter: `StatefulShellRoute.indexedStack` + redirect по `SessionState` |
@@ -131,6 +124,16 @@ Redirect-матрица:
 | `widgets/skeleton.dart` | Анимированный placeholder с `FadeTransition` |
 | `widgets/infinite_scroll_list.dart` | Generic `ListView` с авто-триггером `onLoadMore` за 200px до конца |
 | `extensions/context_x.dart` | `context.theme / colors / textTheme / showSnackBar` |
+
+### features/auth/
+
+Первая фича — login + register.
+
+| Слой | Файлы | Что делает |
+|------|-------|-----------|
+| domain | `entities/auth_tokens.dart`, `repositories/auth_repository.dart`, `usecases/{login,register}_usecase.dart` | Контракт + UseCase'ы (оркестрация repo + `SessionController.update()`) |
+| data | `dto/`, `mappers/`, `datasources/auth_remote_datasource.dart`, `repositories/auth_repository_impl.dart` | Dio-вызовы, маппинг exception→Failure через `throw` |
+| presentation | `bloc/{login,register}_bloc.dart`, `mixins/auth_form_validation_mixin.dart`, `scope/auth_scope.dart`, `screens/{login,register}_screen.dart` | Bloc только для submit. Локальный стейт формы — в `StatefulWidget` через `ValueNotifier`, валидация — через миксин. DI в `AuthScopeHolder.initState` через `AppScope.read(context)` |
 
 ---
 

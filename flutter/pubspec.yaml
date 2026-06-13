@@ -1,34 +1,14 @@
-name: chirp
-description: Chirp — Twitter-like social app (Flutter client)
+name: chirp_monorepo
+description: Chirp Flutter monorepo — apps + packages workspace
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
   sdk: ^3.10.8
 
-dependencies:
-  flutter:
-    sdk: flutter
-
-  flutter_bloc: ^8.1.6
-  bloc_concurrency: ^0.2.5
-  equatable: ^2.0.5
-
-  go_router: ^14.6.3
-
-  dio: ^5.7.0
-
-  flutter_secure_storage: ^9.2.4
-  shared_preferences: ^2.3.3
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  integration_test:
-    sdk: flutter
-  bloc_test: ^9.1.7
-  mocktail: ^1.0.4
-  flutter_lints: ^4.0.0
-
-flutter:
-  uses-material-design: true
+workspace:
+  - apps/chirp
+  - apps/storybook
+  - packages/app_api
+  - packages/ui_kit
+  - packages/qa_tools_flutter

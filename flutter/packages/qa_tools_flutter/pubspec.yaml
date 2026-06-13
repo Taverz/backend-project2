@@ -1,0 +1,29 @@
+name: qa_tools_flutter
+description: UI debuging from testing application.
+version: 2.0.5
+publish_to: 'none'
+resolution: workspace
+topics: [debug, color-picker, performance, ui, qa]
+
+environment:
+  sdk: ^3.10.8
+  flutter: ">=3.35.0"
+
+dependencies:
+  device_info_plus: ^12.3.0
+  flutter:
+    sdk: flutter
+  package_info_plus: ^9.0.0
+  shared_preferences: ^2.5.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+
+flutter:
+  assets:
+    - assets/images/icon.png
+  # Manrope-fonts удалены из дистрибутива — debug-overlay использует системный
+  # шрифт. Если нужны, положи ttf в assets/fonts/manrope/ и раскомментируй.

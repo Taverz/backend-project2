@@ -38,7 +38,9 @@ features/<name>/domain/
 ```
 
 **Проверка чистоты domain/**: файлы должны компилироваться без Flutter и Dio.  
-Запрещено: `import 'package:dio/...`, `import 'package:flutter/...`, DTO-типы, `Map<String, dynamic>`.
+Запрещено: `import 'package:dio/...`, `import 'package:flutter/...`, DTO-типы, `Map<String, dynamic>`, `Result<T>` (его нет).
+
+**Контракты возвращают `Future<T>` и бросают `Failure` при ошибке** (`Failure implements Exception`). Никакого `Result<T>` / `Ok` / `Err`.
 
 **UseCase нужен, если есть хотя бы одно из:**
 - 2+ репозитория в одной операции
@@ -67,26 +69,36 @@ features/<name>/data/
 ```
 
 **Правила:**
-- DTO не выходит из `data/` — наружу только entities и `Result<T>`
-- `RepositoryImpl` не пробрасывает исключения, возвращает `Err(failure)`
+- DTO не выходит из `data/` — наружу только entities (через return) и `Failure` (через throw)
+- `RepositoryImpl` ловит инфраструктурные исключения и **бросает `Failure`**. Никаких `Result<T>`.
 - Новые URL → только через `core/network/endpoints.dart`
 
 **Маппинг исключений в Failure** (шаблон для `RepositoryImpl`):
 ```dart
-Future<Result<Tweet>> getById(String id) async {
+Future<Tweet> getById(String id) async {
   try {
     final dto = await _dataSource.getTweet(id);
-    return Ok(TweetMapper.fromDto(dto));
+    return TweetMapper.fromDto(dto);
   } on UnauthorizedException {
-    return const Err(UnauthorizedFailure());
+    throw const UnauthorizedFailure();
   } on ApiException catch (e) {
-    if (e.statusCode == 404) return const Err(NotFoundFailure());
-    return Err(ServerFailure(statusCode: e.statusCode));
+    if (e.statusCode == 404) throw const NotFoundFailure();
+    throw ServerFailure(statusCode: e.statusCode);
   } on NetworkException {
-    return const Err(NetworkFailure());
-  } catch (_) {
-    return const Err(UnknownFailure());
+    throw const NetworkFailure();
   }
+}
+```
+
+Bloc-caller обрабатывает так:
+```dart
+try {
+  final tweet = await _repository.getById(id);
+  emit(TweetLoadSuccess(tweet));
+} on Failure catch (failure) {
+  emit(TweetLoadFailure(failure));
+} catch (_) {
+  emit(const TweetLoadFailure(UnknownFailure()));
 }
 ```
 
@@ -98,11 +110,11 @@ Future<Result<Tweet>> getById(String id) async {
 features/<name>/presentation/
 ├── scope/
 │   └── <name>_scope.dart         # XxxScope (InheritedWidget) + XxxScopeHolder
-├── bloc/                         # или cubit/
-│   ├── <name>_bloc.dart
-│   ├── <name>_event.dart
-│   └── <name>_state.dart
-├── wm/                           # только при 2+ Bloc'ах или локальном UI-стейте
+├── bloc/                         # ТОЛЬКО если есть внешний вызов (API/БД/сервис)
+│   └── <name>_bloc.dart          # события/состояния в том же файле или part-файлы
+├── mixins/                       # переиспользуемая UI-логика (валидация форм и т.п.)
+│   └── <name>_form_validation_mixin.dart
+├── wm/                           # только при 2+ Bloc'ах или сложной координации
 │   └── <name>_wm.dart
 ├── screens/
 │   └── <name>_screen.dart
@@ -112,11 +124,23 @@ features/<name>/presentation/
 
 ### Выбор инструмента состояния
 
+Принцип: **Bloc — только для внешнего I/O.** Cubit на проекте не используем. Локальный UI-стейт — в виджете.
+
 ```
-Один bool (открыт/закрыт)?              → setState / ValueNotifier
-Форма, фильтры, простые мутации?        → Cubit
-Пагинация, поиск с debounce/switchMap?  → Bloc, extends PaginatedBloc<T>
-2+ Bloc'а на экране / локальный стейт?  → WM поверх них
+Локальный стейт виджета (текст инпута, видимость пароля, errorText
+поля, флаг шагa визарда)?
+  → StatefulWidget + TextEditingController + ValueNotifier.
+    Логику валидации — в миксин, подмешиваемый в State.
+
+Есть вызов API/БД/сервиса (login, fetchTimeline, sendTweet)?
+  → Bloc с sealed-состояниями (XxxInitial/InProgress/Success/Failure).
+    Bloc держит только статус операции, не локальный UI-стейт формы.
+
+Пагинация?
+  → extends PaginatedBloc<T>.
+
+2+ Bloc'а на экране?
+  → WM поверх них.
 ```
 
 ### Именование событий и состояний Bloc
@@ -143,6 +167,8 @@ final class XxxLoadFailure extends XxxState { final Failure failure; }
 
 ### ScopeHolder — шаблон
 
+DI создаётся в `initState` через `AppScope.read(context)` (lookup без подписки, разрешён в `initState`). `didChangeDependencies` для DI не используем.
+
 ```dart
 class HomeScopeHolder extends StatefulWidget { ... }
 
@@ -152,9 +178,7 @@ class _HomeScopeHolderState extends State<HomeScopeHolder> {
   @override
   void initState() {
     super.initState();
-    final appScope = AppScope.of(context);
-    // AppScope сейчас предоставляет: session, dio, prefs, router.
-    // TweetStore и TweetRepository будут добавлены в AppScope при реализации фичи tweet.
+    final appScope = AppScope.read(context);  // lookup без подписки
     _timelineBloc = TimelineBloc(TimelineRepositoryImpl(
       TimelineRemoteDataSource(appScope.dio),
     ));
@@ -220,25 +244,29 @@ test/features/<name>/
 ## Чек-лист перед merge
 
 ### Структура
-- [ ] Три слоя есть; `domain/` чистый (без Flutter/Dio)
+- [ ] Три слоя есть; `domain/` чистый (без Flutter/Dio/Result)
 - [ ] Фича владеет своими сущностями, чужие — только через `*/domain/`
 - [ ] Endpoint'ы и маршруты — в константах
 
 ### Data
 - [ ] DTO ↔ entity через mapper; DTO не выходит из `data/`
-- [ ] `RepositoryImpl` возвращает `Result`, исключения не утекают
+- [ ] `RepositoryImpl` ловит инфраструктурные исключения и **бросает `Failure`**, никакого `Result`
 - [ ] Shared-сущности идут через store
 
 ### Состояние
-- [ ] Инструмент выбран по таблице выше
+- [ ] Bloc есть только там, где есть внешний вызов (нет Bloc'а под чистую форму)
+- [ ] Cubit'ов нет
+- [ ] Локальный стейт формы — в `StatefulWidget` через `ValueNotifier` + миксин
 - [ ] Пагинация — через `PaginatedBloc`
 - [ ] UseCase'ы содержательные (не пустые пробросы)
 - [ ] События — факты, состояния — sealed
+- [ ] Bloc ловит `Failure` через `try/catch on Failure`
 
 ### UI
 - [ ] Экран не трогает repo/Dio напрямую
 - [ ] Навигация — на экране/в WM по событиям Bloc'а
 - [ ] Все 4 состояния: Loading / Error(+Retry) / Empty / Data
+- [ ] DI в ScopeHolder создаётся в `initState` через `AppScope.read(context)`
 
 ### Тесты
 - [ ] mapper_test на реальном JSON
@@ -254,6 +282,9 @@ test/features/<name>/
 | `import 'package:dio/...'` в `domain/` или `presentation/` | перенести в datasource |
 | DTO в сигнатуре Bloc'а | прогнать через mapper → entity |
 | `Map<String, dynamic>` выше data | DTO + entity |
+| `Result<T>` / `Ok` / `Err` где угодно | `throw Failure` + `try/catch on Failure` |
+| `Cubit` где угодно | Bloc (если внешнее I/O) или виджет+ValueNotifier+миксин |
+| Bloc под чистую форму без внешнего вызова | виджет+ValueNotifier+миксин |
 | Bloc слушает другой Bloc | WM или store |
 | `BuildContext` в Bloc/usecase | состояние + реакция на экране |
 | `context.go/showDialog` в Bloc | `BlocListener` на экране |
@@ -261,3 +292,4 @@ test/features/<name>/
 | UseCase = `repo.method()` | прямой вызов из Bloc |
 | `import 'features/x/data/...'` из другой фичи | только `features/x/domain/` |
 | Глобальный static / GetIt | scope-дерево |
+| DI в `didChangeDependencies` ScopeHolder'а | `initState` + `AppScope.read(context)` |

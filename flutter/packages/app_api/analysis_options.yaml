@@ -1,0 +1,11 @@
+include: ../../analysis_options.yaml
+
+# app_api — контракт API. Жёстко: запрещён flutter/widgets и flutter/material
+# (это чистый Dart + dio + flutter/services для rootBundle).
+analyzer:
+  exclude:
+    - 'tool/**'        # CLI-скрипт refresh_fixtures.dart использует dart:io и print
+
+linter:
+  rules:
+    public_member_api_docs: false   # пока не требуем, но включить когда библиотека стабилизируется

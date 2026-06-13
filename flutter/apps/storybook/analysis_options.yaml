@@ -1,0 +1,7 @@
+include: ../../analysis_options.yaml
+
+# storybook — каталог компонентов. Тут можно использовать что угодно для
+# демонстрации use-case'ов; правила мягче.
+linter:
+  rules:
+    avoid_redundant_argument_values: false
