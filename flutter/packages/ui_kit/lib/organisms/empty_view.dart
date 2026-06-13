@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../gen/assets.gen.dart';
 import '../icons/app_icon_data.dart';
 import '../theme/app_colors.dart';
-import 'app_icon.dart';
+import '../atoms/app_icon.dart';
 
 class EmptyView extends StatelessWidget {
   const EmptyView({super.key, required this.message, this.icon});

@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart' show Scaffold;
-import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ui_kit/ui_kit.dart';
@@ -10,8 +8,9 @@ import '../scope/auth_scope.dart';
 import '../view_models/login_view_model.dart';
 import '../view_models/login_view_state.dart';
 
-/// Из Material использует ТОЛЬКО `Scaffold`. Никаких `flutter_bloc` импортов —
-/// UI зависит только от `LoginViewModel` и `LoginViewState`.
+/// Container/controller. Берёт VM из AuthScope, держит controllers и notifier'ы
+/// для локального стейта формы, прокидывает callbacks в `LoginTemplate` (ui_kit).
+/// Весь UI — в template'е; здесь только wiring.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -40,95 +39,37 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final vm = AuthScope.of(context).loginViewModel;
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AppAppBar(title: 'Вход'),
-            Expanded(
-              child: ValueListenableBuilder<LoginViewState>(
-                valueListenable: vm.state,
-                builder: (context, state, _) {
-                  final isSubmitting = state.isSubmitting;
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 16),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: _emailError,
-                          builder: (_, error, __) => AppTextField(
-                            key: const Key('login_email_field'),
-                            controller: _emailController,
-                            label: 'Email',
-                            errorText: error,
-                            enabled: !isSubmitting,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            onChanged: (_) => _emailError.value = null,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ValueListenableBuilder<bool>(
-                          valueListenable: _obscurePassword,
-                          builder: (_, obscure, __) =>
-                              ValueListenableBuilder<String?>(
-                                valueListenable: _passwordError,
-                                builder: (_, error, __) => AppTextField(
-                                  key: const Key('login_password_field'),
-                                  controller: _passwordController,
-                                  label: 'Пароль',
-                                  errorText: error,
-                                  enabled: !isSubmitting,
-                                  obscureText: obscure,
-                                  textInputAction: TextInputAction.done,
-                                  autocorrect: false,
-                                  suffix: GestureDetector(
-                                    onTap: () =>
-                                        _obscurePassword.value = !obscure,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                      ),
-                                      child: AppIcon(
-                                        obscure
-                                            ? AppIcons.eyeOpen
-                                            : AppIcons.eyeClosed,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                  onChanged: (_) =>
-                                      _passwordError.value = null,
-                                  onSubmitted: (_) => _onSubmit(vm),
-                                ),
-                              ),
-                        ),
-                        const SizedBox(height: 24),
-                        AppButton(
-                          key: const Key('login_submit_button'),
-                          label: 'Войти',
-                          isLoading: isSubmitting,
-                          onPressed: isSubmitting ? null : () => _onSubmit(vm),
-                        ),
-                        const SizedBox(height: 8),
-                        AppTextButton(
-                          label: 'Нет аккаунта? Зарегистрироваться',
-                          onPressed: isSubmitting
-                              ? null
-                              : () => context.go(Routes.register),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    return ValueListenableBuilder<LoginViewState>(
+      valueListenable: vm.state,
+      builder: (context, state, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: _obscurePassword,
+          builder: (context, obscure, _) {
+            return ValueListenableBuilder<String?>(
+              valueListenable: _emailError,
+              builder: (context, emailErr, _) {
+                return ValueListenableBuilder<String?>(
+                  valueListenable: _passwordError,
+                  builder: (context, passwordErr, _) {
+                    return LoginTemplate(
+                      emailController: _emailController,
+                      passwordController: _passwordController,
+                      emailError: emailErr,
+                      passwordError: passwordErr,
+                      obscurePassword: obscure,
+                      isSubmitting: state.isSubmitting,
+                      onSubmit: () => _onSubmit(vm),
+                      onRegisterTap: () => context.go(Routes.register),
+                      onTogglePassword: () =>
+                          _obscurePassword.value = !obscure,
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 

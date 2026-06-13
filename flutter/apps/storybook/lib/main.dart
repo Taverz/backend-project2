@@ -11,6 +11,7 @@ import 'use_cases/app_text_field_use_cases.dart';
 import 'use_cases/catalog_use_cases.dart';
 import 'use_cases/empty_view_use_cases.dart';
 import 'use_cases/error_view_use_cases.dart';
+import 'use_cases/templates_use_cases.dart';
 
 void main() => runApp(const StorybookApp());
 
@@ -19,10 +20,6 @@ class StorybookApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // FlutterLens оборачивал Widgetbook overlay'ом, но он мешал routing'у
-    // widgetbook'а (canvas оставался пуст при выборе use-case'а). Если нужен
-    // debug-инспектор в storybook — вернуть `FlutterLens(builder: (c, _, __) =>
-    // _buildWidgetbook(c))` после проверки совместимости версий.
     return _buildWidgetbook(context);
   }
 
@@ -44,7 +41,7 @@ class StorybookApp extends StatelessWidget {
           useCases: catalogUseCases,
         ),
         WidgetbookCategory(
-          name: 'Primitives',
+          name: '⚛️ Atoms',
           children: [
             WidgetbookComponent(
               name: 'AppButton',
@@ -59,6 +56,11 @@ class StorybookApp extends StatelessWidget {
               name: 'AppLoader',
               useCases: appLoaderUseCases,
             ),
+          ],
+        ),
+        WidgetbookCategory(
+          name: '🧬 Molecules',
+          children: [
             WidgetbookComponent(
               name: 'AppAppBar',
               useCases: appAppBarUseCases,
@@ -70,7 +72,7 @@ class StorybookApp extends StatelessWidget {
           ],
         ),
         WidgetbookCategory(
-          name: 'Composites',
+          name: '🦠 Organisms',
           children: [
             WidgetbookComponent(
               name: 'ErrorView',
@@ -79,6 +81,24 @@ class StorybookApp extends StatelessWidget {
             WidgetbookComponent(
               name: 'EmptyView',
               useCases: emptyViewUseCases,
+            ),
+          ],
+        ),
+        WidgetbookCategory(
+          name: '📄 Templates',
+          children: [
+            WidgetbookFolder(
+              name: 'auth',
+              children: [
+                WidgetbookComponent(
+                  name: 'LoginTemplate',
+                  useCases: loginTemplateUseCases,
+                ),
+                WidgetbookComponent(
+                  name: 'RegisterTemplate',
+                  useCases: registerTemplateUseCases,
+                ),
+              ],
             ),
           ],
         ),

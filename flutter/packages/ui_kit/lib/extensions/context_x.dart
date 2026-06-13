@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/app_snack_bar.dart';
+import '../molecules/app_snack_bar.dart';
 
 extension ContextX on BuildContext {
   ThemeData get theme => Theme.of(this);

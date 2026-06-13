@@ -2,8 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import '../icons/app_icon_data.dart';
 import '../theme/app_colors.dart';
-import 'app_button.dart';
-import 'app_icon.dart';
+import '../atoms/app_button.dart';
+import '../atoms/app_icon.dart';
 
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.message, this.onRetry});

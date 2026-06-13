@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart' show Scaffold;
-import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ui_kit/ui_kit.dart';
@@ -42,109 +40,44 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     final vm = AuthScope.of(context).registerViewModel;
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AppAppBar(title: 'Регистрация'),
-            Expanded(
-              child: ValueListenableBuilder<RegisterViewState>(
-                valueListenable: vm.state,
-                builder: (context, state, _) {
-                  final isSubmitting = state.isSubmitting;
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 16),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: _usernameError,
-                          builder: (_, error, __) => AppTextField(
-                            key: const Key('register_username_field'),
-                            controller: _usernameController,
-                            label: 'Имя пользователя',
-                            errorText: error,
-                            enabled: !isSubmitting,
-                            textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            onChanged: (_) => _usernameError.value = null,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: _emailError,
-                          builder: (_, error, __) => AppTextField(
-                            key: const Key('register_email_field'),
-                            controller: _emailController,
-                            label: 'Email',
-                            errorText: error,
-                            enabled: !isSubmitting,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            onChanged: (_) => _emailError.value = null,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ValueListenableBuilder<bool>(
-                          valueListenable: _obscurePassword,
-                          builder: (_, obscure, __) =>
-                              ValueListenableBuilder<String?>(
-                                valueListenable: _passwordError,
-                                builder: (_, error, __) => AppTextField(
-                                  key: const Key('register_password_field'),
-                                  controller: _passwordController,
-                                  label: 'Пароль',
-                                  errorText: error,
-                                  enabled: !isSubmitting,
-                                  obscureText: obscure,
-                                  textInputAction: TextInputAction.done,
-                                  autocorrect: false,
-                                  suffix: GestureDetector(
-                                    onTap: () =>
-                                        _obscurePassword.value = !obscure,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                      ),
-                                      child: AppIcon(
-                                        obscure
-                                            ? AppIcons.eyeOpen
-                                            : AppIcons.eyeClosed,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                  onChanged: (_) =>
-                                      _passwordError.value = null,
-                                  onSubmitted: (_) => _onSubmit(vm),
-                                ),
-                              ),
-                        ),
-                        const SizedBox(height: 24),
-                        AppButton(
-                          key: const Key('register_submit_button'),
-                          label: 'Создать аккаунт',
-                          isLoading: isSubmitting,
-                          onPressed: isSubmitting ? null : () => _onSubmit(vm),
-                        ),
-                        const SizedBox(height: 8),
-                        AppTextButton(
-                          label: 'Уже есть аккаунт? Войти',
-                          onPressed: isSubmitting
-                              ? null
-                              : () => context.go(Routes.login),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    return ValueListenableBuilder<RegisterViewState>(
+      valueListenable: vm.state,
+      builder: (context, state, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: _obscurePassword,
+          builder: (context, obscure, _) {
+            return ValueListenableBuilder<String?>(
+              valueListenable: _usernameError,
+              builder: (context, usernameErr, _) {
+                return ValueListenableBuilder<String?>(
+                  valueListenable: _emailError,
+                  builder: (context, emailErr, _) {
+                    return ValueListenableBuilder<String?>(
+                      valueListenable: _passwordError,
+                      builder: (context, passwordErr, _) {
+                        return RegisterTemplate(
+                          usernameController: _usernameController,
+                          emailController: _emailController,
+                          passwordController: _passwordController,
+                          usernameError: usernameErr,
+                          emailError: emailErr,
+                          passwordError: passwordErr,
+                          obscurePassword: obscure,
+                          isSubmitting: state.isSubmitting,
+                          onSubmit: () => _onSubmit(vm),
+                          onLoginTap: () => context.go(Routes.login),
+                          onTogglePassword: () =>
+                              _obscurePassword.value = !obscure,
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
