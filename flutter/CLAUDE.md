@@ -32,6 +32,9 @@ flutter/
 | Правила кода, нейминг, анти-паттерны | [`../docs/flutter/ARCHITECTURE_RULES.md`](../docs/flutter/ARCHITECTURE_RULES.md) |
 | Как добавить новую фичу | [`../docs/flutter/HOW-TO-ADD-FEATURE.md`](../docs/flutter/HOW-TO-ADD-FEATURE.md) |
 | Тесты | [`../docs/flutter/TESTING.md`](../docs/flutter/TESTING.md) |
+| Архитектурные пробелы, roadmap, идеи | [`../docs/flutter/ARCHITECTURE_GAPS_AND_IDEAS.md`](../docs/flutter/ARCHITECTURE_GAPS_AND_IDEAS.md) |
+| Работа с API (контракт, фикстуры, codegen) | [`packages/app_api/docs/DEVELOPMENT.md`](packages/app_api/docs/DEVELOPMENT.md) |
+| Правила построения виджетов ui_kit | [`packages/ui_kit/docs/WIDGET_GUIDELINES.md`](packages/ui_kit/docs/WIDGET_GUIDELINES.md) |
 
 ## Команды
 
