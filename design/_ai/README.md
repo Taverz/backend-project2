@@ -39,7 +39,8 @@
 | [`WORKFLOW.md`](WORKFLOW.md) | 5 стандартных процедур: draw screen, create component, extend, validate, write copy. Пошагово. | Перед началом любой задачи |
 | [`COMMANDS.md`](COMMANDS.md) | `/draw-screen`, `/create-component`, `/validate-`, `/copy`, `/audit`, etc. Triggers и outputs. | Когда понимаешь намерение пользователя |
 | [`CONTEXT-MAP.md`](CONTEXT-MAP.md) | Какие файлы из `design/` читать для какой задачи. Минимальный + extended. | После определения типа задачи |
-| [`FIGMA-RULES.md`](FIGMA-RULES.md) | Pages, frame naming, components, variants, auto-layout, styles. Self-check. | При работе непосредственно в Figma |
+| [`FIGMA-RULES.md`](FIGMA-RULES.md) | Pages, frame naming, components, variants, auto-layout, styles. Self-check. **§14 — common AI/MCP pitfalls.** | При работе непосредственно в Figma |
+| [`REVIEW-2026-06-15-figma-v0.1.md`](REVIEW-2026-06-15-figma-v0.1.md) | Senior UX/UI ревью первой AI-сборки Figma-файла. Findings + remediation plan. | Перед "v0.2" итерацией Figma-файла |
 
 ---
 
