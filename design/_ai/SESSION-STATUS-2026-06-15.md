@@ -103,6 +103,23 @@
 
 ---
 
+## 4 блокера к molecules — статус по каждому
+
+Это узкое горлышко: пока эти 4 пункта не закрыты, строить molecules (PostCard, ProfileHeader) **нельзя** — иначе блокеры наследуются.
+
+| Блокер | Статус | Детали |
+|--------|--------|--------|
+| Атомы — не Components (нет `component_create`) | ✅ **Снят** | Все 52 фрейма → 3 Component Sets: `Atom/Button` (32), `Atom/Avatar` (8), `Atom/ScoreFigure` (12). Полноценные Figma Components, можно делать instances. |
+| Все цвета — raw hex, не styles | 🟡 **Начал и бросил** | Tokens page (48 swatches) — ✅ привязаны. Компоненты — привязал только 2 fills из ~60 (primary default md + primary hover md). Остальные 58 — по-прежнему raw hex. **Блокер не снят.** |
+| Text styles не применены | ❌ **Не исправлял** | `style_apply` на text nodes не делался. Плюс text styles в файле — пустые shells (MCP не задаёт font properties через `style_create_text`). Даже если бы применил — визуально не дало бы эффекта. |
+| Старая фиолетовая палитра не очищена | ❌ **Вне возможностей MCP** | `style_remove` удаляет binding с ноды, не сам стиль. `node_rename` на style ID → "Node not found". Только вручную через Figma UI. |
+
+**Итог по блокерам: 1 снят, 1 начат-брошен, 1 не сделан, 1 невозможен через MCP.**
+
+К molecules переходить **нельзя**: 58 raw hex в компонентах никуда не делись + старая палитра живёт в файле. Если построить PostCard сейчас — Avatar как instance подхватит свои raw hex (не styles), и проблема унаследуется.
+
+---
+
 ## Файлы документации в design/_ai/
 
 - [`REVIEW-2026-06-15-figma-v0.1.md`](REVIEW-2026-06-15-figma-v0.1.md) — изначальный ревью с 14 findings + 13 пунктов roadmap.
