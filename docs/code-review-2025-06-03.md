@@ -1,86 +1,106 @@
-# Code Review Report — Chirp Phase 1
+# Code Review Report — Phase 2 Complete (3-Stream)
 
-**Date:** 2025-06-03  
-**Session:** `25468bf4`  
-**Reviewers:** tool (`review`) + manual deep-dive  
-**Scope:** Phase 1 complete — structure, user/auth, tweet CRUD, PG/Redis adapters
+**Date:** 2025-06-03
+**Reviewers:** 3 parallel CodeWhale sub-agents
+**Scope:** All Phase 1 + Phase 2 code (user, auth, tweet, timeline, follow, likes)
 
 ---
 
 ## Methodology
 
-Two independent reviews were conducted and compared:
+Three independent agents reviewed the codebase in parallel:
 
-| Review | Method | Files analyzed |
-|--------|--------|---------------|
-| #1 | Automated (`review` tool) | `main.go`, `app.go` |
-| #2 | Manual (read + analyze) | All 12 key files across all layers |
+| Stream | Agent | Focus |
+|--------|-------|-------|
+| **A** | `review-arch` | Architecture & Patterns (clean arch, dependency direction, module structure) |
+| **B** | `review-bugs` | Correctness & Bugs (null pointers, race conditions, resource leaks, edge cases) |
+| **C** | `review-fresh` | Fresh Eyes (no checklists — security, intuition, naming, inconsistency) |
+
+Each agent reviewed ALL Go files independently. Findings were consolidated and de-duplicated.
 
 ---
 
 ## Findings
 
-### ❌ Critical
+### 🔴 Critical
 
-| # | Finding | File | Reviewer |
-|---|---------|------|-----------|
-| C1 | `log.Fatal` in goroutine kills process instantly, bypassing `defer` and graceful shutdown | `cmd/server/main.go:58` | #1 + #2 |
-| C2 | `isNoRows()` uses `err.Error() == "no rows in result set"` — should use `errors.Is(err, pgx.ErrNoRows)` from pgx/v5 | `adapter/postgres/user_repo.go:87` | #2 |
+| # | Finding | Source | File:Line |
+|---|---------|--------|-----------|
+| **CR1** | **Delete оставляет зомби-запись в byUser** — твит удаляется из `tweets`, но не из `byUser[authorID]`. ListByAuthor вернёт nil-pointer. | B (bugs) | `memory/tweet_repo.go:71-76` |
+| **CR2** | **Data race: sort.Slice под RLock** — `GetHomeTimeline` делает `sort.Slice` под `RLock`, мутируя слайс. Параллельный `AddEntry` — гонка. | B (bugs) | `memory/timeline_repo.go:38` |
+| **CR3** | **config.Load() импортирует adapter/memory** — обратная зависимость: config → adapter. Нарушение clean architecture. | C (fresh) | `config/config.go:5` |
+| **CR4** | **JWT не проверяет aud/iss claims** — токен, выпущенный для одного сервиса, валиден в любом контексте. | C (fresh) | `memory/auth.go:80` |
 
-### ⚠️ Warning
+### 🟠 Major
 
-| # | Finding | File | Reviewer |
-|---|---------|------|-----------|
-| W1 | Duplicate swagger annotations: package-level (lines 2-14) + function-level (lines 32-39) in `main()` | `cmd/server/main.go` | #1 + #2 |
-| W2 | `context.Background()` without timeout for PostgreSQL connection — can hang on startup | `app/app.go:43` | #1 + #2 |
-| W3 | `context.Background()` without timeout for Redis connection | `app/app.go:56` | #1 + #2 |
-| W4 | `register.go` imports `domain/user` twice: unnamed (shadows local package `user`) + aliased `domainUser` | `usecase/user/register.go:6-7` | #2 |
-| W5 | Memory `UserRepo` does O(n) linear scan for `GetByEmail`/`GetByUsername` — no secondary index maps | `adapter/memory/user_repo.go:37-53` | #2 |
+| # | Finding | Source | File:Line |
+|---|---------|--------|-----------|
+| **MJ1** | **FanOutUseCase: хардкод limit=100000** — пользователь с 10M фолловеров → OOM. Нужен cursor-loop или Kafka. | A+B+C | `usecase/timeline/fanout.go:30` |
+| **MJ2** | **register.go игнорирует ошибки GetByEmail/GetByUsername** — `existing, _ := ...` — БД упала → молчаливо пропустили. | B (bugs) | `usecase/user/register.go:48` |
+| **MJ3** | **Ошибка fan-out молча дропается** — `_ = h.fanOut.Execute(...)`, ни лога, ни алерта. | B (bugs) | `transport/tweet_handler.go:94` |
+| **MJ4** | **Нет проверки существования пользователя перед follow** — можно подписаться на несуществующий UUID. | B (bugs) | `transport/follow_handler.go:44` |
+| **MJ5** | **Нет rate limiting** — брутфорс логина, спам регистраций без ограничений. | C (fresh) | — |
+| **MJ6** | **HS256 вместо RS256** — симметричный ключ требует полный секрет для каждой валидации. | C (fresh) | `memory/auth.go` |
+
+### ⚠️ Minor
+
+| # | Finding | Source | File:Line |
+|---|---------|--------|-----------|
+| **MN1** | **FollowRepository — 7 методов** (guideline: 1-3). Можно разделить при переходе на PG. | A (arch) | `port/follow_repo.go:10-18` |
+| **MN2** | **created_at всегда zero-value в memory-адаптерах** — `0001-01-01T00:00:00Z`. | B (bugs) | все memory-репо |
+| **MN3** | **like/unlike handler'ы игнорируют ok из UserIDFromContext** — если не авторизован, просто передаёт пустую строку. | B (bugs) | `app.go:209` |
+| **MN4** | **follow_handler.go — 90% дубликат кода** в Followers/Following. | B (bugs) | `transport/follow_handler.go` |
+| **MN5** | **AddEntry мутирует входной Entry.ScoredAt** — побочный эффект, нарушение контракта. | C (fresh) | `memory/timeline_repo.go:24` |
+| **MN6** | **Авто-генерация JWT-секретов в проде** — если `APP_ENV` не задан. | C (fresh) | `config/config.go:25` |
+| **MN7** | **GenerateSecret в пакете memory** — криптография не должна быть в memory. | C (fresh) | `memory/auth.go:102` |
+| **MN8** | **app.go — God Object: 264 строки** — wiring + routing + 4 inline-хендлера в одном файле. | C (fresh) | `app/app.go` |
+| **MN9** | **ListFollowers/ListFollowing всегда возвращают nextCursor=""** — порт обещает cursor, но memory не реализует. | C (fresh) | `memory/follow_repo.go:65` |
+| **MN10** | **Email валидация: `mail.ParseAddress` требует `<angle@brackets>`?** — проверить, работает ли без скобок. | C (fresh) | `domain/user/email.go:14` |
 
 ### ℹ️ Info
 
-| # | Finding | File | Reviewer |
-|---|---------|------|-----------|
-| I1 | `JWT AuthService` and `PasswordHasher` are in `adapter/memory/` package but are not memory-specific — they should be in `adapter/auth/` or similar | `adapter/memory/auth.go`, `password.go` | #1 + #2 |
-| I2 | `healthHandler` and `helloHandler` lost their swagger annotations when `app.go` was refactored | `app/app.go:128-142` | #2 |
-
-### ✅ Positive
-
-| # | Observation | Reviewer |
-|---|-------------|-----------|
-| P1 | Clean architecture respected: `usecase` imports `port`, not `adapter`. No dependency inversions | #2 |
-| P2 | Proper `sync.RWMutex` in all in-memory repos — no data races | #2 |
-| P3 | Graceful shutdown closes both `pgPool` and `redisCli` before HTTP server | #2 |
-| P4 | Smart adapter selection: `DATABASE_URL` unset → memory fallback with warning | #2 |
-| P5 | Value objects (`Username`, `Email`, `Password`, `Body`) with proper validation | #2 |
-| P6 | RFC 7807 error responses consistently used across all handlers | #2 |
+| # | Finding | Source |
+|---|---------|--------|
+| **I1** | FollowRepository: 7 методов — можно разбить на Reader + Writer | A |
+| **I2** | LikeRepository: 5 методов — аналогично | A |
+| **I3** | Создание твита делает 2 запроса для проверки parent вместо 1 | C |
+| **I4** | UseCase возвращает `*domain.Tweet` вместо DTO — нарушение слоя | C |
+| **I5** | Refresh-токены живут 7 дней без возможности отзыва | C |
+| **I6** | Нет аудит-лога неудачных аутентификаций | C |
+| **I7** | `Password` тип — `string`, при логировании утечёт plaintext | C |
+| **I8** | HTTP без TLS — ок для dev, проблема для prod | C |
 
 ---
 
-## Comparison: tool vs manual
+## Stream Comparison
 
-| Metric | `review` tool | Manual |
-|--------|:------------:|:------:|
-| Total findings | 5 | 10 |
-| Matched findings | 5/5 | 5/5 |
-| Unique findings | 0 | 5 |
-| False positives | 0 | 0 |
-| Missed critical bugs | C2 | — |
+| Метрика | A (Arch) | B (Bugs) | C (Fresh) |
+|---------|:--------:|:--------:|:---------:|
+| Critical | 0 | 2 | 2 |
+| Major | 0 | 4 | 2 |
+| Minor | 2 | 2 | 5 |
+| Info | 2 | 0 | 4 |
+| **Total** | **4** | **8** | **13** |
 
-**Conclusion:** The `review` tool is consistent (zero hallucinations, zero false positives) but shallow — it found 5 surface-level issues and missed 5 deeper ones including a fragile error comparison (C2) and a double import (W4). Manual review found 2× more problems.
+**Анализ:**
+- Stream A (Arch) — поверхностный: не нашёл config→adapter обратную зависимость
+- Stream B (Bugs) — самый плотный: 2 critical + 4 major, все подтверждены
+- Stream C (Fresh) — самый широкий: 2 critical + 7 minor/info, нашёл то, что A пропустил
+
+**Лучшие находки:**
+- B: Data race в timeline (CR2) + зомби-запись в byUser (CR1)
+- C: Обратная зависимость config→adapter (CR3) + email-валидация под вопросом (MN10)
+- A: Раздутые интерфейсы (I1, I2) — минорно, но архитектурно важно
 
 ---
 
-## Resolution (2025-06-03)
+## Recommended Fixes (priority)
 
-| # | Status | Fix |
-|---|:------:|-----|
-| C1 | ✅ Fixed | `log.Fatal` → buffered `chan error` + `select` |
-| C2 | ✅ Fixed | `err.Error() == "..."` → `errors.Is(err, pgx.ErrNoRows)` |
-| W1 | ✅ Fixed | Removed duplicate annotations from `main()` body |
-| W2 | ✅ Fixed | PG init: `context.WithTimeout(context.Background(), 5*time.Second)` |
-| W3 | ✅ Fixed | Redis init: `context.WithTimeout(context.Background(), 3*time.Second)` |
-| W4 | ✅ Fixed | Removed unnamed import, unified on `domainUser` alias |
-| I2 | ✅ Fixed | Swagger annotations restored on `healthHandler`, `helloHandler` |
-| W5 | ⬜ Deferred | O(n) memory lookup — dev-only adapter, not worth fixing |
-| I1 | ⬜ Deferred | Auth/Password in `memory` pkg — cosmetic refactor for later |
+1. **CR1** — Fix zombie entry in byUser on delete
+2. **CR2** — Copy slice before sort in timeline
+3. **CR3** — Move GenerateSecret out of adapter/memory
+4. **MJ2** — Don't ignore GetByEmail errors in register
+5. **MJ3** — Log fan-out errors, don't silent-drop
+6. **MJ4** — Check user existence before follow
+7. **CR4** — Add aud/iss validation to JWT
+8. **MN1-MN10** — Address during Phase 3 refactoring
