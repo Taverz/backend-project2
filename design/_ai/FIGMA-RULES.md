@@ -47,38 +47,38 @@ Format: `<Feature>/<Screen>/<Variant>/<State>`
 
 | Example | Расшифровка |
 |---------|-------------|
-| `Profile/Self/Default` | Profile фича, own profile, default state |
+| `Profile/Own/Default` | Profile фича, own profile, default state |
 | `Profile/Other/Following` | Profile other user в "following" state |
-| `Feed/Home/Loading` | Feed фича, Home variant, loading state |
+| `Timeline/Home/Loading` | Timeline фича, Home variant, loading state |
 | `Compose/Modal/Empty` | Compose modal, empty state |
-| `Search/Recruiter/Results` | Search фича, recruiter variant, with results |
+| `Search/Results/Default` | Search фича, results variant, default |
 
 Уровни:
 
-- **Feature** — главная категория (matches `02-strategy/MVP-SCOPE.md` категории)
+- **Feature** — главная категория (matches `docs/shared/FEATURES.md`)
 - **Screen** — конкретный экран
-- **Variant** (optional) — Self/Other, Modal/Page, etc.
-- **State** — Default / Loading / Empty / Error / Success
+- **Variant** (optional) — Own/Other, Modal/Page, Home/Mentions, etc.
+- **State** — Default / Loading / Empty / Error / LoadingMore
 
 State обязателен. Если у экрана нет нескольких states — используй `Default`.
 
 ### Components
 
-Format: `<Layer>/<Name>` для master.
+Format: `<Layer>/<Name>` для master. Имена совпадают с code class names
+(см. `docs/shared/DESIGN-CONTRACT.md §1`).
 
 | Example | Расшифровка |
 |---------|-------------|
 | `Atom/Avatar` | Atomic level component |
 | `Atom/Button` | |
 | `Atom/Input` | |
-| `Atom/ScoreFigure` | |
-| `Atom/TopicTag` | |
-| `Atom/ComplexityBadge` | |
-| `Molecule/PostCard` | Composed component |
+| `Atom/TopBar` | |
+| `Atom/IconButton` | |
+| `Molecule/TweetCard` | Composed component |
 | `Molecule/ProfileHeader` | |
-| `Molecule/EndorseButton` | |
-| `Organism/Feed` | Multi-molecule structure |
-| `Organism/RecruiterSearchBar` | |
+| `Molecule/BottomTabBar` | |
+| `Organism/Timeline` | Multi-molecule structure (feed + bottom bar) |
+| `Organism/ProfileScreen` | |
 
 Layer levels:
 
@@ -243,29 +243,29 @@ Detached instance = bug. Это разрывает связь с дизайн-с
 Шаблон:
 
 ```
-PostCard
+TweetCard
 
 What:
-Карточка поста в Bable. Используется в feed, profile, search results.
+Карточка твита в Chirp. Используется в timeline, profile, search results.
 
 When to use:
-- Feed (variant: feed)
-- Profile posts list (variant: feed)
+- Timeline (variant: feed)
+- Profile tweets list (variant: feed)
 - Search results (variant: feed compact)
-- Post detail (variant: detail — promoted)
+- Tweet detail (variant: detail — promoted)
 
 Properties:
 - variant: feed / detail / reply
 - showActions: boolean (default true)
-- hasCodeBlock: boolean
-- ownPost: boolean (показывает … menu)
-- liked: boolean (endorse icon active)
+- hasMedia: boolean
+- ownTweet: boolean (показывает … menu)
+- liked: boolean (like icon active)
 
 Tokens:
-post-card-bg, post-card-divider, …
+post-card-bg, post-card-divider, post-card-author-name, … (см. component-tokens.md)
 
 Docs:
-design/04-components/post-card.md
+design/04-components/molecules/tweet-card.md
 ```
 
 ---
@@ -277,7 +277,7 @@ design/04-components/post-card.md
 ```
 ┌─────────────────────────────────────┐
 │                                      │
-│     Bable                            │  Serif h1
+│     Chirp                            │  Serif h1
 │     Mobile Design System v0.1        │  Sans body-bold
 │                                      │
 │     Last updated: <date>             │  caption
@@ -317,15 +317,15 @@ Component не дублируется для light/dark — он рендери�
 
 | Pattern | Когда |
 |---------|-------|
-| `ScoreFigure` | Когда визуальная "вещь" (figure = number visual) |
-| `ScoreBadge` | Когда compact pill / chip |
-| `ScoreRow` | Когда список scores (multi-line) |
-| `ScoreExplanation` | Когда детальный modal/section |
-| `Endorse**Button**` | Когда нажимается |
-| `Endorse**List**` | Когда список людей |
-| `Endorse**Card**` | Когда полная info карточка |
+| `<X>Button` | Когда нажимается (LikeButton, FollowButton, RetweetButton) |
+| `<X>Card` | Когда композитная карточка (TweetCard, NotificationCard) |
+| `<X>Row` | Когда строка в списке (UserRow, NotificationRow) |
+| `<X>List` | Когда список (FollowersList, TweetsList) |
+| `<X>Tile` | Когда compact item в grid/list (UserTile) |
+| `<X>Bar` | Когда navigation/header bar (TopBar, BottomTabBar) |
+| `<X>Sheet` | Когда bottom sheet / drawer |
 
-Используй consistent suffixes: `Button`, `Card`, `Row`, `List`, `Badge`, `Figure`, `Tag`, `Chip`, `Tile`, `Item`.
+Используй consistent suffixes: `Button`, `Card`, `Row`, `List`, `Badge`, `Tile`, `Item`, `Bar`, `Sheet`.
 
 Не используй: `Container`, `Wrapper`, `Box`, `Element` — слишком generic.
 

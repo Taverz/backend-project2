@@ -15,6 +15,7 @@
 | [`icons.md`](icons.md) | Phosphor icons, canonical vocabulary, sizes, colours |
 | [`code-theme.md`](code-theme.md) | Syntax highlighting palette для code blocks (light + dark) |
 | [`component-tokens.md`](component-tokens.md) | **Промежуточный слой** между semantic и компонентом. Button, Input, Card, Avatar, PostCard, Score, Tag, и др. |
+| [`semantic-mappings.md`](semantic-mappings.md) | Сквозная таблица primitive → semantic → component для каждого компонента. Read-only срез. |
 
 ## Принципы tokens
 

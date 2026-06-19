@@ -1,225 +1,99 @@
-# Дизайнер + AI: как подготовить документацию для генерации дизайна
+# Designer + AI — Flow
 
-> Какие файлы нужны дизайнеру, чтобы попросить AI нарисовать дизайн в Figma,
-> и по каким критериям этот дизайн ревьюить.
-
----
-
-## 1. Что AI должен сгенерировать
-
-AI получает задачу: «Нарисуй экран LoginScreen в Figma».
-AI должен создать:
-
-- Frame экрана (390×844 — iPhone 14 размер)
-- Все элементы: поля, кнопки, текст
-- Правильные цвета, шрифты, отступы
-- Все состояния (loading, error, success)
-- Auto-layout между элементами
-- Компоненты (Button, InputField — не «с нуля», а из Design System)
+> Как дизайнер ставит AI задачу на дизайн в Figma, и по каким критериям дизайн ревьюится.
+> Этот файл — короткий навигатор. Конкретные шаблоны и правила — в связанных документах.
 
 ---
 
-## 2. Какие файлы нужны AI для генерации дизайна
+## Где что лежит
 
-| # | Файл | Что AI из него берёт | Без этого файла |
-|---|------|---------------------|-----------------|
-| 1 | **SCREENS.md** | Список экранов, какие элементы на каждом, порядок | AI не знает, что есть LoginScreen, RegisterScreen, HomeScreen |
-| 2 | **WIDGET-DATA-FLOW.md** | Widget tree: иерархия элементов, вложенность | AI сделает плоский экран без группировки (avatar рядом с body, а не в строке) |
-| 3 | **DESIGN-SYSTEM.md** | Цвета (primary, background, error), шрифты (body 16px, h1 24px), компоненты (Button radius 24px, InputField height 44px) | AI придумает свои цвета и шрифты |
-| 4 | **WIDGET-STATES.md** | Состояния каждого компонента: Button disabled/loading, InputField error/focused | AI сделает только default-состояние |
-| 5 | **08-BEHAVIOR.md** | Расположение элементов (email сверху, password снизу), логика потока | AI может перепутать порядок полей |
-| 6 | **DESIGN-CONTRACT.md** | Иконки (названия, размер 24×24, currentColor), экспорт SVG | AI использует эмодзи вместо иконок |
-| 7 | **SCREENS.md (раздел States)** | Что показывать в каждом состоянии: Skeleton для loading, "No tweets yet" для empty | AI не нарисует empty state |
-
----
-
-## 3. Промпт для AI: «Нарисуй дизайн LoginScreen»
-
-```
-Входные документы:
-- DESIGN-SYSTEM.md (цвета, шрифты, отступы)
-- SCREENS.md (LoginScreen раздел)
-- WIDGET-DATA-FLOW.md (LoginScreen widget tree)
-- WIDGET-STATES.md (Button, InputField состояния)
-- 08-BEHAVIOR.md (LoginScreen логика)
-- DESIGN-CONTRACT.md (иконки)
-
-Задача: Создай Figma-дизайн для LoginScreen.
-
-Figma frame: iPhone 14 (390×844)
-Style: Dark mode (тёмная тема)
-
-Элементы сверху вниз:
-1. Центрированный логотип с текстом "Welcome to Chirp"
-   - h1 (24px), white, центрировано
-   - margin-bottom: 32px
-
-2. Поле email
-   - InputField компонент
-   - placeholder: "Email"
-   - keyboard type: email
-   - margin-bottom: 16px
-
-3. Поле password
-   - InputField компонент
-   - placeholder: "Password"
-   - obscured (****)
-   - eye toggle icon справа
-   - margin-bottom: 24px
-
-4. Кнопка "Log in"
-   - PrimaryButton компонент
-   - full-width
-   - disabled когда поля пустые
-
-5. Ссылка "Don't have an account? Sign up"
-   - caption (13px), grey
-   - "Sign up" — primary color (#1DA1F2)
-
-6. Состояния (отдельными фреймами):
-   - Default: пустые поля, enabled кнопка
-   - Error: email красный border + "Enter a valid email address"
-   - Loading: spinner в кнопке, поля disabled
-
-Auto-layout:
-- Все элементы в Column, центрированы
-- Padding: 32px по бокам
-- Gap между элементами: по margin-bottom
-
-Иконки:
-- eye toggle: ic_eye.svg (из DESIGN-CONTRACT.md)
-- Ссылайся на компоненты из Design System, не создавай новые
-```
+| Если хочешь… | Открой |
+|--------------|--------|
+| Готовый промт "нарисуй экран" | `docs/PROMPT-TEMPLATES.md §7` |
+| Готовый промт "создай компонент" | `docs/PROMPT-TEMPLATES.md §8` |
+| Готовый промт "сделай ревью дизайна" | `docs/PROMPT-TEMPLATES.md §9` |
+| Готовый промт "Figma → Flutter код" | `docs/PROMPT-TEMPLATES.md §10` |
+| Список всех экранов и состояний | `docs/shared/SCREENS.md` + `docs/shared/WIDGET-STATES.md` |
+| Канон визуальной системы (цвета, шрифты, отступы) | `design/03-tokens/` |
+| Список компонентов | `design/04-components/README.md` |
+| Контракт naming Figma↔code | `docs/shared/DESIGN-CONTRACT.md` |
+| Pipeline AI-агента и пошаговые процедуры | `design/_ai/WORKFLOW.md` |
+| Identity и границы AI-дизайнера | `design/_ai/AGENT.md` |
+| Правила работы в Figma (pages, frames, variants) | `design/_ai/FIGMA-RULES.md` |
+| Контекст-карта "что читать для какой задачи" | `design/_ai/CONTEXT-MAP.md` |
 
 ---
 
-## 4. Чеклист ревью для дизайнера
+## Минимальные входные данные для дизайн-задачи
 
-После того как AI нарисовал дизайн, дизайнер проверяет:
+Чтобы AI нарисовал экран без галлюцинаций, у него должно быть на руках (или должен прочитать):
 
-### 4.1. Layout и композиция
+1. **Имя экрана из `docs/shared/SCREENS.md`** — что именно рисуем.
+2. **Список обязательных состояний** — `docs/shared/WIDGET-STATES.md` + `docs/shared/DESIGN-CONTRACT.md §4`.
+3. **Поведение и порядок элементов** — спека фичи, например `docs/shared/auth-flow/08-BEHAVIOR.md`.
+4. **Канон токенов** — `design/03-tokens/colours.md`, `typography.md`, `spacing.md`, `icons.md`.
+5. **Канон компонентов** — `design/04-components/` (что уже существует).
+6. **Контракт naming** — `docs/shared/DESIGN-CONTRACT.md §1` (layer names = code class names).
 
-| Проверка | Критерий | Источник |
-|----------|----------|----------|
-| Порядок элементов | Email → Password → Button → Link? | 08-BEHAVIOR.md |
-| Отступы | 32px по краям, 16px между полями? | DESIGN-SYSTEM.md (spacing) |
-| Выравнивание | Всё по центру? | 08-BEHAVIOR.md |
-| Размер экрана | 390×844? | Промпт |
-
-### 4.2. Дизайн-система
-
-| Проверка | Критерий | Источник |
-|----------|----------|----------|
-| Цвета | Primary = #1DA1F2, Background = #15202B? | DESIGN-SYSTEM.md |
-| Шрифты | body = 16px, h1 = 24px, caption = 13px? | DESIGN-SYSTEM.md |
-| Кнопка | Radius = 24px, Height = 44px? | DESIGN-SYSTEM.md |
-| Поля ввода | Height = 44px, Border = 1px solid? | DESIGN-SYSTEM.md |
-| Иконки | 24×24, currentColor? | DESIGN-CONTRACT.md |
-
-### 4.3. Состояния
-
-| Проверка | Критерий | Источник |
-|----------|----------|----------|
-| Все ли состояния есть | Default, Error, Loading? | 06-UI-STATES.md |
-| Error state | Email красный border + inline error? | 06-UI-STATES.md |
-| Loading state | Spinner в кнопке, поля disabled? | 06-UI-STATES.md |
-| Disabled state | Кнопка opacity 0.5? | WIDGET-STATES.md |
-
-### 4.4. Контент
-
-| Проверка | Критерий | Источник |
-|----------|----------|----------|
-| Placeholder | Email / Password? | 08-BEHAVIOR.md |
-| Button text | "Log in", не "Login" или "Sign in"? | 08-BEHAVIOR.md |
-| Error message | "Enter a valid email address", не "Invalid format"? | ERRORS.md |
-
-### 4.5. Компоненты
-
-| Проверка | Критерий | Источник |
-|----------|----------|----------|
-| Компонент или сырой фрейм | AI использовал компоненты из Design System? | DESIGN-CONTRACT.md |
-| Variants | Button Primary, а не Outline? | WIDGET-STATES.md |
-| Auto-layout | Всё через Auto Layout? | DESIGN-CONTRACT.md |
+Без любого из этого — AI спрашивает или фиксирует open question, не выдумывает.
 
 ---
 
-## 5. Какие документы должны быть у дизайнера (минимальный набор)
+## Чеклист ревью дизайн-результата
 
-Чтобы AI нарисовал дизайн, дизайнер должен предоставить AI **4 файла**:
+После того как AI вернул frame'ы, дизайнер сверяет:
 
-```
-designer-input/
-├── 01-SCREENS-LAYOUT.md    ← что где находится (виджет-три + расположение)
-├── 02-DESIGN-SYSTEM.md     ← цвета, шрифты, компоненты
-├── 03-STATES.md            ← все состояния каждого экрана
-└── 04-BEHAVIOR.md          ← логика, порядок элементов
-```
+### Layout и композиция
+- Порядок элементов совпадает со спекой поведения?
+- Размер экрана = mobile 390×844 (или web 1440 по запросу)?
+- Auto-layout везде; нет absolute positioning без причины?
+- Padding/Gap кратны 4 и идут через `space-N` токены?
 
-Если этих файлов нет — AI нарисует "что-то похожее на Twitter", но:
+### Дизайн-система
+- Все цвета — Figma styles из `design/03-tokens/colours.md` (semantic слой)?
+- Все шрифты — text styles из `design/03-tokens/typography.md`?
+- Все радиусы — из шкалы `radius-xs/sm/md/lg/full`?
+- Иконки — только Phosphor Regular из `design/03-tokens/icons.md` vocabulary?
+- Никакого raw hex (`#1DA1F2`, `#FFFFFF` и т.п.)?
 
-- Цвета будут не те (AI выберет #000000 вместо #15202B)
-- Кнопки будут квадратные (AI не знает про radius 24px)
-- Не будет empty state (AI нарисует только данные)
-- Порядок полей может быть не тот (Password сверху Email)
+### Состояния
+- Все обязательные states (Default / Loading / Empty / Error / LoadingMore если список)?
+- Каждое состояние — отдельный frame в одной Page?
 
----
+### Контент
+- Кнопки — глагол в императиве?
+- Empty/Error — факт + действие, без маркетинга?
+- Без emoji в UI chrome?
+- Без банлист-фраз ("Welcome back!", "Get started!", "Awesome!")?
 
-## 6. Что AI НЕ может сделать и должен проверить дизайнер
+### Компоненты
+- Все интерактивные элементы — instances из `design/04-components/`?
+- Никаких detached instances?
+- Naming совпадает с `docs/shared/DESIGN-CONTRACT.md §1`?
 
-| Что AI делает плохо | Что проверяет дизайнер |
-|---------------------|----------------------|
-| Отступы между элементами | Правильные ли gap (16px vs 24px?) |
-| Выравнивание текста | Не съехал ли текст влево, когда должен быть по центру |
-| Цвета в разных темах | Light и Dark theme — одинаковые ли токены |
-| Переполнение контента | Что будет, если username = 30 символов? |
-| Accessibility | Контрастность, размер tap-target (min 44×44) |
-| Анимации/переходы | Нет в документации → AI их не сделает |
-| Pixel-perfect | AI округляет отступы (15px вместо 16px) |
-| Иерархия компонентов | Button создан с нуля, а не из Design System |
-
----
-
-## 7. Шаблон: задача дизайнеру для AI
-
-```
-## TASK-DESIGN-123: LoginScreen дизайн
-
-### Входные данные
-- SCREENS.md → LoginScreen
-- DESIGN-SYSTEM.md → цвета, шрифты, компоненты
-- WIDGET-DATA-FLOW.md → LoginScreen widget tree
-- WIDGET-STATES.md → состояния Button, InputField
-- 08-BEHAVIOR.md → логика и порядок элементов
-
-### Формат
-- Figma file: chirp-auth.fig
-- Frame: iPhone 14 (390×844)
-- Theme: Dark mode
-
-### Что сделать
-Создать Figma-дизайн LoginScreen с состояниями:
-1. Default — пустая форма
-2. Field error — невалидный email
-3. Loading — spinner в кнопке
-4. Error — 401 toast
-
-Все компоненты — из Design System (не создавать новые).
-```
+### A11y
+- Контраст body на surface проходит AA (см. `colours.md §7`)?
+- Touch targets ≥ 44×44 на mobile?
+- Focus rings указаны для primary CTA?
 
 ---
 
-## 8. Итог: минимальный набор для дизайнера
+## Чего AI стабильно НЕ делает хорошо (всегда перепроверяй)
 
-| Файл | Зачем | Кто заполняет |
-|------|-------|---------------|
-| **SCREENS.md** | Список экранов, элементы, состояния | Аналитик + AI |
-| **WIDGET-DATA-FLOW.md** | Widget tree, иерархия, вложенность | Аналитик + AI |
-| **DESIGN-SYSTEM.md** | 🎨 **Критично**: цвета, шрифты, отступы, компоненты | Дизайнер (без него AI придумает сам) |
-| **WIDGET-STATES.md** | Состояния компонентов (Button enabled/disabled/loading) | Аналитик + AI |
-| **08-BEHAVIOR.md** | Логика, порядок элементов, business rules | Аналитик + AI |
-| **ERRORS.md** | Сообщения об ошибках для empty/error states | Аналитик |
-| **DESIGN-CONTRACT.md** | Иконки (названия, размеры, экспорт) | Дизайнер |
+| Слепая зона | Что проверять |
+|-------------|--------------|
+| Округление отступов | 15px вместо 16 — лови глазами, либо инструментом |
+| Контраст в обеих темах | Light и dark отдельно проверь токеном-инструментом |
+| Переполнение контента | Username 30 символов / tweet 280 символов — что произойдёт? |
+| Состояния, не описанные явно | AI не нарисует, что не упомянуто — добавь в задачу |
+| Анимации | AI не описывает motion, если в задаче не указано — см. `motion.md` |
+| Pivot-наследие | AI может случайно вспомнить `Endorse`/`Score`/`Expertise` — это сигнал отвергнуть |
+| Material/Twitter палитра | `#1DA1F2`, `Icons.favorite` — устаревшие примеры, не пускать в результат |
 
-**Критично:** DESIGN-SYSTEM.md и DESIGN-CONTRACT.md — без них AI не знает,
-какого цвета кнопки и как называются иконки. Остальное AI может додумать,
-но цвета и шрифты — нет.
+---
+
+## Связь со старой версией
+
+Этот файл раньше содержал детальный промт для `LoginScreen` с Twitter-палитрой (#1DA1F2) и
+устаревшей структурой DESIGN-SYSTEM.md. Промты переехали в **`docs/PROMPT-TEMPLATES.md`**
+с актуальными ссылками на каноны. Используй его — не legacy примеры.

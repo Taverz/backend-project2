@@ -1,6 +1,8 @@
 # Design Folder Structure
 
-> Папка для дизайнера. Содержит всё, что нужно AI для генерации Figma-дизайна.
+> Все артефакты дизайна Chirp: токены, компоненты, фича-спеки.
+> Продукт = Twitter-clone (см. `/SOUL.md` и `docs/shared/`).
+> Визуальная айдентика — editorial calm с тёплой палитрой и terra cotta акцентом.
 
 ---
 
@@ -8,75 +10,87 @@
 
 ```
 design/
-├── project-overview.md        ← Что за проект, платформы, аудитория, тон
-├── tokens.md                  ← Цвета, типографика, отступы, иконки
+├── README.md                 ← (this)
 │
-├── 01-auth/                   ← Фича: Авторизация
-│   ├── README.md              ← Экраны: Splash, Login, Register
-│   └── components.md          ← Компоненты: Button, InputField, Avatar, Toast, Link, ErrorView
-│
-├── 02-home/                   ← Фича: Лента (TODO)
+├── _ai/                      ← Workflow для AI-агента
+│   ├── AGENT.md              ← Роль и правила
+│   ├── WORKFLOW.md           ← Как создавать экран/компонент
+│   ├── COMMANDS.md           ← Шорткаты команд
+│   ├── FIGMA-RULES.md        ← Конвенции в Figma
+│   ├── CONTEXT-MAP.md        ← Что читать перед задачей
 │   ├── README.md
-│   └── components.md
+│   └── archive/              ← Прошлые session-логи и ревью
 │
-├── 03-tweet/                  ← Фича: Твиты (TODO)
-│   ├── README.md
-│   └── components.md
+├── 01-auth/                  ← Feature: Splash / Login / Register
+│   ├── README.md             ← Экраны и состояния
+│   └── components.md         ← Спеки уникальных для auth атомов
 │
-├── 04-profile/                ← Фича: Профиль (TODO)
-│   ├── README.md
-│   └── components.md
+├── 03-tokens/                ← Канонические design tokens
+│   ├── README.md             ← Индекс и принципы
+│   ├── colours.md            ← Primitives + semantic (light/dark)
+│   ├── typography.md         ← Type scale, font stack
+│   ├── spacing.md            ← 4-base scale
+│   ├── radius-elevation.md   ← Borders + почти-нет-shadows
+│   ├── motion.md             ← Duration, easing
+│   ├── icons.md              ← Phosphor + canonical vocabulary
+│   ├── code-theme.md         ← Syntax highlighting
+│   ├── component-tokens.md   ← Промежуточный слой semantic → component
+│   └── semantic-mappings.md  ← Сводная таблица primitive → semantic → component
 │
-├── 05-notifications/          ← Фича: Уведомления (TODO)
-│   ├── README.md
-│   └── components.md
-│
-├── 06-search/                 ← Фича: Поиск (TODO)
-│   ├── README.md
-│   └── components.md
-│
-└── shared/                    ← Переиспользуемые компоненты (TODO)
-    ├── tweet-card.md
-    ├── follow-button.md
-    ├── timeline-list.md
-    └── tab-bar.md
+└── 04-components/            ← Atomic дизайн
+    ├── README.md             ← Tier-priority и spec template
+    ├── atoms/                ← Avatar, Button
+    ├── molecules/            ← README + WIP молекулы
+    └── organisms/            ← WIP
 ```
 
-## Как добавлять новую фичу
+---
 
-1. Создать папку `design/{NN}-{feature-name}/`
-2. Создать `README.md` — все экраны фичи с layout и состояними
-3. Создать `components.md` — все виджеты, уникальные для этой фичи
-4. Если новый общий компонент — добавить в `design/shared/`
+## _archive_pivot/
 
-## Как AI использует эту папку
+В `_archive_pivot/` лежит IT-expertise pivot, который был отвергнут:
+brief (Persona Recruiter, Expertise Score), research, strategy, и
+pivot-специфичные атомы (`score-figure`, `button-passport`). Извлечь
+оттуда любую часть можно, если решим вернуться к концепции.
+
+Текущая продуктовая концепция: см. **`/SOUL.md`** и
+**`docs/shared/FEATURES.md`** — стандартный Twitter-flow с твитами,
+лайками, фолоу и таймлайном.
+
+---
+
+## Workflow добавления фичи
+
+1. Создать `design/{NN}-{feature-name}/` (например `02-feed/`)
+2. `README.md` — экраны фичи: layout, состояния (Loading/Empty/Error/Data)
+3. `components.md` — атомы и молекулы, уникальные для фичи
+4. Общие компоненты — в `design/04-components/`
+5. Все цвета/шрифты/spacing — только через токены из `design/03-tokens/`
+
+---
+
+## Как AI использует папку
 
 ```
-AI получает задачу: "Нарисуй LoginScreen"
+Задача: "Нарисуй FeedScreen"
 
-1. Читает design/project-overview.md     → контекст
-2. Читает design/tokens.md               → цвета, шрифты, иконки
-3. Читает design/01-auth/README.md       → layout и состояния
-4. Читает design/01-auth/components.md   → Button, InputField specs
+1. Читает /SOUL.md и docs/shared/FEATURES.md   → продуктовый контекст
+2. Читает design/03-tokens/README.md           → визуальные правила
+3. Читает design/04-components/README.md       → доступные компоненты
+4. Читает design/02-feed/README.md             → экран и состояния
+5. Читает design/02-feed/components.md         → специфика фичи
 
-→ Генерирует Figma frame
-  LoginScreen × 7 состояний
-  Все компоненты из Design System
+→ Генерирует Figma frame с состояниями, используя только design tokens.
 ```
 
-## Как дизайнер ревьюит
+См. `_ai/WORKFLOW.md` для детального процесса.
 
-```
-1. Открыть Figma-дизайн, сгенерированный AI
-2. Сверить с design/01-auth/README.md:
-   - Порядок элементов совпадает?
-   - Все состояния есть?
-   - Текст ошибок правильный?
-3. Сверить с design/tokens.md:
-   - Цвета совпадают?
-   - Шрифты совпадают?
-   - Отступы совпадают?
-4. Сверить с design/01-auth/components.md:
-   - Button использован Primary, не Outline?
-   - InputField с правильными variants?
-```
+---
+
+## Связанная документация
+
+- `/SOUL.md` — архитектура и доменные модули backend
+- `docs/shared/FEATURES.md` — продуктовые фичи
+- `docs/shared/DESIGN-CONTRACT.md` — naming, icons, screen states, Figma↔Code
+- `docs/shared/DESIGN-SYSTEM.md` — концепция дизайн-системы (источник — `design/03-tokens/`)
+- `docs/flutter/ICON-STRATEGY.md` — как иконки загружаются в Flutter

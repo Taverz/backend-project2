@@ -39,7 +39,7 @@
 
 ### Prerequisites
 
-- Screen из `02-strategy/MVP-SCOPE.md`. Если не из MVP — спросить, добавлять ли в scope.
+- Screen из `docs/shared/SCREENS.md`. Если экрана нет в списке — спросить, добавлять ли в scope.
 - Components, которые понадобятся, существуют или явно создаются параллельно.
 
 ### Procedure
@@ -101,8 +101,8 @@ User: /create-component molecule/post-card
 ```
 
 ```
-User: Создай компонент EndorseButton
-→ Уточняю: какой layer? Atom (только button) или Molecule (icon + count + animation)?
+User: Создай компонент TweetCard
+→ Уточняю: какой layer? Molecule (составной из Avatar/Username/Body/ActionRow)?
 ```
 
 ---
@@ -152,22 +152,23 @@ User: /extend-variant button danger
 Список нарушений с цитатами и приоритетом:
 
 ```
-Validation: ProfileScreen / Self / Default
+Validation: ProfileScreen / Default
 
 Critical (must fix):
-1. [tokens/colours.md] Surface bg использует raw #FFFFFF — должно быть `surface`
-2. [anti-patterns.md AP-2.1] Follower count показан в header
+1. [03-tokens/colours.md §5] Surface bg использует raw #FFFFFF — должно быть semantic `surface`
+2. [docs/flutter/ICON-STRATEGY.md] В Avatar Material `Icons.person` — должно быть Phosphor `User` через UiIcon
 
 Warning (should fix):
-3. [typography.md] Score number использует body-bold — должен быть serif-figure
+3. [03-tokens/typography.md §2] Username использует caption — должен быть body-bold
+4. [docs/shared/WIDGET-STATES.md] Отсутствует LoadingMore state
 
 Suggestion (nice to have):
-4. [positive-patterns.md PP-1.3] Endorsement list мог бы показывать score эндорсера
+5. Avatar border у own-profile — добавить subtle accent border
 
 Pass:
 - Spacing tokens ✓
 - Copy guide ✓
-- Iconography ✓
+- Iconography (Phosphor) ✓ кроме п.2
 ```
 
 ---
@@ -248,27 +249,29 @@ Recommended: <A/B/C> because <reason>
 
 ### Procedure
 
-1. Read all `00-brief/*`, `01-research/*`, `02-strategy/*`, `03-tokens/*`
+1. Read `/CLAUDE.md`, `/SOUL.md`, `docs/shared/DESIGN-CONTRACT.md`, all `design/03-tokens/*`, all `design/04-components/*`
 2. Cross-check:
-   - Tokens referenced в компонентах существуют
-   - Components referenced в screens существуют
-   - Copy в UI follows guide
-   - Anti-patterns absent
+   - Tokens referenced в компонентах существуют в `colours.md` / `component-tokens.md`
+   - Components referenced в screens существуют в `04-components/`
+   - Все component-tokens покрыты в `semantic-mappings.md`
+   - Naming совпадает между Figma и кодом (`DESIGN-CONTRACT.md §1`)
+   - Никаких raw hex, никаких Material Icons, никакого Twitter blue в активных файлах
 3. Output: comprehensive report
 
 ### Output
 
 ```
-Audit Bable Design System — <date>
+Audit Chirp Design System — <date>
 
 OK ✓:
-- 47/47 MVP-SCOPE features have rationale
-- 100% tokens organized in 3 layers
-- 0 hardcoded hex в documented components
+- N/N screens из docs/shared/SCREENS.md покрыты в design/<feature>/
+- 100% tokens организованы в 3 слоя
+- 0 hardcoded hex в активных компонентах
+- semantic-mappings.md синхронизирован с component-tokens.md
 
 Warnings ⚠:
-- ProfileScreen использует `accent` для 2 actions (PRINCIPLES §X — один accent на экран)
-- Score figure font в SearchResults — `body-bold` вместо `serif-figure`
+- TimelineScreen использует `accent` для 2 actions (один accent CTA на экран)
+- TweetCard avatar size 32 — должен быть 40 (component-tokens.md avatar-size-md)
 
 Critical ✗:
 - (none / or list)
@@ -318,8 +321,8 @@ Verification: contrast/scale rule passed
 ### Trigger
 
 - "Что такое X?"
-- "/explain expertise-score"
-- "Расскажи про Bable"
+- "/explain timeline-fan-out"
+- "Расскажи про Chirp"
 
 ### Procedure
 
@@ -341,13 +344,13 @@ Related: <other concepts>
 ### Examples
 
 ```
-User: /explain expertise-score
+User: /explain timeline-fan-out
 
-Score per topic, computed as Σ endorsement.weight × complexity_multiplier − decay.
-Weight зависит от Score эндорсера по той же теме (StackOverflow-style).
+Твит при создании рассылается в ленты всех подписчиков (fan-out on write).
+Чтение ленты — один быстрый запрос. Запись дорогая для популярных авторов.
 
-Details: 00-brief/PROJECT-BRIEF.md § 5.1
-Related: weighted endorsement, peer-review, anti-pattern AP-3.3 (one-click endorsements)
+Details: /SOUL.md §2.4 + §3 (timeline модуль)
+Related: home timeline endpoint, follow module, Phase 3 Kafka-оптимизация
 ```
 
 ---

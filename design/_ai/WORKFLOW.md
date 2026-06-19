@@ -1,6 +1,6 @@
-# Workflow — Стандартные процедуры
+# Design Workflow — Стандартные процедуры
 
-> Как делать стандартные задачи: draw screen, create component, extend, validate.
+> Как делать типовые задачи: draw screen, create component, extend, validate, convert.
 > Каждая процедура — пошаговая, без shortcut'ов.
 > Если думаешь "можно пропустить шаг" — нельзя.
 
@@ -12,11 +12,13 @@
 
 ```
 1. Read     ← собрать контекст
-2. Plan     ← описать что собираешься делать
-3. Execute  ← создать в Figma / files
-4. Validate ← проверить себя
+2. Plan     ← описать что собираешься делать (получить согласие user'а)
+3. Execute  ← создать в Figma / md-spec
+4. Validate ← проверить себя по чеклисту
 5. Hand off ← вернуть с deltas + open questions
 ```
+
+См. также `docs/PROMPT-TEMPLATES.md` — там для каждой задачи есть готовый промт-шаблон.
 
 ---
 
@@ -24,21 +26,24 @@
 
 ### Trigger
 
-User говорит: "Нарисуй экран X" / "/draw-screen <name>" / "Сделай Profile screen".
+User говорит: "Нарисуй экран X" / `/draw-screen <name>` / "Сделай Profile screen".
 
 ### Step 1 — Read context
 
 Минимум:
+- `/CLAUDE.md` (если новая сессия)
 - `_ai/AGENT.md` (если новая сессия)
-- `00-brief/VISION.md`
-- `00-brief/COPY-GUIDE.md`
-- `02-strategy/MVP-SCOPE.md` — найти этот экран в списке
-- `03-tokens/colours.md` — semantic + component tokens
-- `03-tokens/typography.md`
-- `03-tokens/spacing.md`
-- `03-tokens/icons.md`
-- `03-tokens/component-tokens.md` — для компонент-tokens
-- `04-components/` — все компоненты, которые могут быть на этом экране (если папка существует)
+- `docs/shared/SCREENS.md` — найти этот экран в списке
+- `docs/shared/WIDGET-STATES.md` — какие состояния обязательны
+- `docs/shared/FEATURES.md` — продуктовая логика фичи, к которой принадлежит экран
+- `design/03-tokens/colours.md` — semantic слой
+- `design/03-tokens/typography.md`
+- `design/03-tokens/spacing.md`
+- `design/03-tokens/icons.md`
+- `design/03-tokens/component-tokens.md`
+- `design/03-tokens/semantic-mappings.md` — сводная цепочка primitive→semantic→component
+- `design/04-components/` — все компоненты, которые могут быть на этом экране
+- `docs/shared/DESIGN-CONTRACT.md` — naming, состояния, auto-layout
 
 См. `_ai/CONTEXT-MAP.md` § "Draw a screen" для точного списка по типу экрана.
 
@@ -47,45 +52,46 @@ User говорит: "Нарисуй экран X" / "/draw-screen <name>" / "С
 Перед созданием Figma frames — пиши план:
 
 ```
-Screen: ProfileScreen (developer self-view)
+Screen: TimelineScreen (home feed for logged-in user)
 
 States I'll create:
-- [ ] Default (loaded data, scores visible)
-- [ ] Loading (skeleton)
-- [ ] Empty (no posts yet)
-- [ ] Error (failed to fetch)
+- [ ] Default (loaded data, 5+ tweets visible)
+- [ ] Loading (3 skeleton TweetCard)
+- [ ] Empty (no tweets yet, CTA "Find people to follow")
+- [ ] Error (failed to fetch, retry button)
+- [ ] LoadingMore (spinner at bottom of list)
 
 Components I need:
-- ✅ Avatar (exists, size xl)
-- ✅ ScoreFigure (exists)
-- ✅ PostCard (exists, feed variant)
-- 🟡 ProfileHeader (NOT exist — need to create or compose from atoms)
-- ✅ Button (exists, secondary variant for Edit profile)
+- ✅ Avatar (exists, size md = 40)
+- ✅ Button (exists, primary variant for CTA)
+- 🟡 TweetCard (NOT exists yet — нужно создать как molecule перед screen'ом)
+- 🟡 TopBar (NOT exists — atom-level)
+- 🟡 BottomTabBar (NOT exists — molecule)
 
 Layout:
-- Container: `container-prose` 640px max width (desktop), full-width mobile
-- Vertical rhythm: `space-7` from top → header → space-6 → scores → space-6 → posts list
-- Mobile: padding-x `space-3` (12), desktop centered
+- Mobile 390×844 base
+- Vertical rhythm: top bar 56 → list → bottom bar 56
+- List: padding-x space-4 (16), divider border-subtle между постами
+- Empty/Error: centered, space-9 (96) padding-y
 
-Tokens used:
+Tokens used (через semantic):
 - surface (page bg)
-- text-primary (name)
-- text-secondary (handle, timestamp)
-- accent (CTA for Edit, не для scores)
-- serif-figure for score numbers
-- score-figure-color (component token)
+- surface-elevated (cards)
+- text-primary, text-secondary
+- accent (CTA "Find people")
+- border-subtle (dividers)
 
-Copy:
-- Page title: just "@<username>" in top bar
-- Display name: serif h1
-- Empty state copy: per COPY-GUIDE.md "Profile (own, no posts)" → "Write your first post."
-- Error: "Couldn't load profile. Retry."
+Copy (из docs/shared/ или CLAUDE.md, не от себя):
+- Empty: "No tweets yet. Follow someone to see their posts here."
+- Error: "Couldn't load timeline. Retry."
+- CTA: "Find people"
 
 Open questions:
-- ProfileHeader component не существует. Создать как новый molecule или собрать на screen-level?
-- Score row layout — горизонтальный или вертикальный для self-profile vs other-profile?
+- TweetCard component не существует. Создаём как отдельную задачу до этого экрана
+  или собираем inline в этом задании?
+- Top bar: только логотип или поиск тоже на mobile?
 
-Validation я проверю по checklist в Step 4.
+Validation я проверю по чеклисту в Step 4.
 ```
 
 User должен согласиться с планом **до** того как ты начнёшь рисовать. Не молчи и не делай "тихо".
@@ -94,90 +100,90 @@ User должен согласиться с планом **до** того ка�
 
 В Figma (через MCP или plugin):
 
-1. Создай **одну** page для screen, если ещё нет: `Screens / Profile`
-2. Создай frame для каждого state (см. FIGMA-RULES.md naming):
-   - `Profile/Self/Default`
-   - `Profile/Self/Loading`
-   - `Profile/Self/Empty`
-   - `Profile/Self/Error`
+1. Создай **одну** Page для screen, если ещё нет: `Screens / Timeline`
+2. Создай frame для каждого state (см. `FIGMA-RULES.md` naming):
+   - `Timeline/Default`
+   - `Timeline/Loading`
+   - `Timeline/Empty`
+   - `Timeline/Error`
+   - `Timeline/LoadingMore`
 3. Используй **только token styles** и **existing components**:
    - Colour styles — все из `colours.md` (semantic слой)
    - Text styles — из `typography.md`
    - Spacing — через auto-layout с `space-N` значениями
-4. **Никогда** не вставляй raw hex или raw px значения. Если нужны — поднимай вопрос.
-5. **Не дублируй** компоненты — используй instances. Если нужен variant, который не существует — добавь variant в master, не отрывай instance.
+4. **Никогда** не вставляй raw hex или raw px. Если нужны — поднимай вопрос.
+5. **Не дублируй** компоненты — используй instances. Если нужен variant, который не существует —
+   добавь variant в master через отдельную задачу (см. Workflow 3).
+6. Naming layers — по `docs/shared/DESIGN-CONTRACT.md §1` (Figma layer name = code class name).
 
 ### Step 4 — Self-validate
-
-Прогони через checklist (см. также `_ai/CONTEXT-MAP.md` § Validation):
 
 #### Tokens
 - [ ] Все цвета — через colour styles, raw hex отсутствует
 - [ ] Все шрифты — через text styles
-- [ ] Все spacing — кратны 4, через auto-layout
+- [ ] Все spacing кратны 4, через auto-layout
 - [ ] Все radius — из шкалы (`radius-none/xs/sm/md/lg/full`)
-- [ ] Все иконки — Phosphor Regular, из `icons.md` canonical list
+- [ ] Все иконки — Phosphor Regular, из `design/03-tokens/icons.md` canonical list
+- [ ] Никаких Twitter-blue (`#1DA1F2`), даже если попадается в legacy примерах
 
-#### Anti-patterns (`01-research/anti-patterns.md`)
+#### Состояния
+- [ ] Все обязательные states (Default / Loading / Empty / Error)
+- [ ] LoadingMore — если экран = список
+- [ ] Each state — отдельный frame в правильной Page
+
+#### Anti-patterns
 - [ ] Нет emoji в UI chrome
 - [ ] Нет shadows вместо surface/border
-- [ ] Нет streaks / badges as trophies
-- [ ] Нет follower count на первом плане
-- [ ] Нет self-declared skill labels
-- [ ] Нет "Welcome back!" приветствий
-- [ ] Нет recruiter mass-templated UI
+- [ ] Нет gradient backgrounds
+- [ ] Нет pivot-сущностей (`Endorse`, `Score`, `Expertise`, `Recruiter view`)
+- [ ] Нет Material/SF Symbols/FontAwesome иконок
 
-#### Positive patterns (`01-research/positive-patterns.md`)
-- [ ] Каждое число имеет explanation path
-- [ ] Score контекстный (`Rust 720`, не `720`)
-- [ ] Endorser identity visible (когда показываем endorsements)
-- [ ] Type-driven hierarchy (не через цвет)
-- [ ] One accent action на экран
-- [ ] Empty state имеет действие
-- [ ] Errors объяснимы + actionable
-
-#### Copy (`00-brief/COPY-GUIDE.md`)
-- [ ] Buttons — глагол императив
+#### Copy
+- [ ] Buttons — глагол в императиве
 - [ ] Errors — факт + действие
 - [ ] Empty — факт + опц. действие
-- [ ] Никаких из banlist 20+ фраз
+- [ ] Никаких маркетинговых "Welcome back!" / "Get started!"
 
 #### A11y
-- [ ] Контраст body на surface — verified
+- [ ] Контраст body на surface — verified (см. `colours.md §7`)
 - [ ] Touch targets ≥ 44px
 - [ ] Focus rings указаны (хотя бы для primary CTA)
 - [ ] Caption text ≥ 14px, body ≥ 16px
 
-#### Состояния
-- [ ] Все 4 state'а (default / loading / empty / error)
-- [ ] Optimistic UI описано (где применимо)
+#### Naming и структура
+- [ ] Frame names совпадают с `DESIGN-CONTRACT.md §1`
+- [ ] Auto-layout везде, нет absolute positioning без нужды
+- [ ] Components — instances, не detached
 
 ### Step 5 — Hand off
 
 Возвращай user:
 
 ```
-Screen: ProfileScreen (developer self-view)
+Screen: TimelineScreen
 
 Created frames:
-- Profile/Self/Default
-- Profile/Self/Loading
-- Profile/Self/Empty
-- Profile/Self/Error
+- Timeline/Default
+- Timeline/Loading
+- Timeline/Empty
+- Timeline/Error
+- Timeline/LoadingMore
 
 New components/variants added:
-- ProfileHeader (new molecule) — see 04-components/profile-header.md
+- TweetCard (new molecule) — см. design/04-components/molecules/tweet-card.md
+- TopBar (new atom) — см. design/04-components/atoms/top-bar.md
 
-Tokens used: surface, text-primary, text-secondary, accent, serif-figure, score-figure-color, button-secondary-bg, …
+Tokens used: surface, surface-elevated, text-primary, text-secondary, accent,
+  border-subtle, …
 
 Self-validation:
-- Passed: 28/30 checks
-- Open: score layout (vertical chosen — verify with you)
-- Open: ProfileHeader naming (named `MoleculeProfileHeader` — verify)
+- Passed: 24/26 checks
+- Open: Top bar search-icon — нужен ли на mobile или только в search-screen?
+- Open: TweetCard reply-snippet — пока без, добавим если будет reply-feature
 
-Open questions:
-- Should bio be limited to N lines with "... see more" or full?
-- Where does "Edit profile" sit on mobile — header or below?
+Open questions for user:
+- Подтверди TweetCard molecule создан правильно (см. spec)
+- Confirm bottom-bar 5 табов vs 4
 ```
 
 ---
@@ -186,21 +192,22 @@ Open questions:
 
 ### Trigger
 
-User говорит: "Создай компонент X" / "/create-component <name>".
+User говорит: "Создай компонент X" / `/create-component <name>`.
 
 ### Step 1 — Read
 
 Минимум:
 - `_ai/AGENT.md`
-- `02-strategy/MVP-SCOPE.md` — нужен ли вообще в MVP?
-- `03-tokens/component-tokens.md` — есть ли component-token для него?
-- `04-components/` — что уже существует (избегаем дубликатов)
-- Где в UI он применяется — какие screens нужны для понимания контекста
+- `design/04-components/README.md` — Tier-priority и spec template
+- `design/03-tokens/component-tokens.md` — есть ли token для него?
+- `design/03-tokens/semantic-mappings.md` — для маппинга в цепочку
+- `design/04-components/` — что уже существует (избегаем дубликатов)
+- `docs/shared/DESIGN-CONTRACT.md §1, §7, §8` — naming, text styles, variants
 
 ### Step 2 — Plan
 
 ```
-Component: PostCard (organism)
+Component: TweetCard
 Layer: molecule (composed of atoms)
 
 Composed of:
@@ -208,10 +215,8 @@ Composed of:
 - Username text (body-bold)
 - Handle (caption, text-secondary)
 - Timestamp (caption, text-secondary)
-- Post body (body-lg)
-- TopicTag chip
-- ComplexityBadge
-- ActionRow (icons + counts)
+- Tweet body (body-lg)
+- ActionRow (icons + counts: like, reply, retweet, share)
 
 Variants:
 - variant: feed (compact, padded space-4)
@@ -220,43 +225,44 @@ Variants:
 
 Properties (boolean / instance swap):
 - showActions (default true; false for embedded mode)
-- showCodeBlock (true if post has code)
-- ownPost (true → adds menu with Edit/Delete)
-- liked (true → endorse icon active)
+- hasMedia (false default; true → reserve media slot)
+- ownTweet (true → adds menu with Delete)
+- liked (true → like icon active state)
 
 States within variants:
 - default
 - pressed (overlay)
-- loading (skeleton variant separately)
+- skeleton (separate variant)
 
-Component tokens used:
-- post-card-bg
-- post-card-divider
+Component tokens used (existing):
+- post-card-bg → surface-elevated
+- post-card-divider → border-subtle
 - post-card-padding-y/x
-- post-card-author-name
+- post-card-author-name / handle / timestamp
 - post-card-actions-color-default/active
 
 Open questions:
-- Should reply variant include parent post snippet? Or solo?
-- Hover state — `hover-overlay` или нет hover для editorial?
+- Reply variant — показывать parent tweet snippet?
+- Hover state на mobile — нет; на web — `hover-overlay`?
 ```
 
 ### Step 3 — Execute
 
-1. Создай master component в Figma page `Components / Molecules / PostCard`
-2. Используй **auto-layout** на всех уровнях — никаких absolute positioning
+1. Создай master component в Figma page `Components / Molecules / TweetCard`
+2. **Auto-layout** на всех уровнях — никаких absolute positioning
 3. Свойства как **component properties** (boolean / instance swap / text)
 4. Variants как **variant properties** (state, density, role)
-5. Каждый sub-element ссылается на token styles
+5. Каждый sub-element ссылается на token styles из `colours.md` / `typography.md`
 6. Никаких detached instances внутри
-7. Документ внутри (Figma description) — что компонент, какие variants, где использовать
+7. Description в Figma — что компонент, какие variants, где использовать
+8. Создай md-spec по template из `design/04-components/README.md` §"Spec template"
 
 ### Step 4 — Self-validate
 
 #### Component structure
 - [ ] Все sub-elements через auto-layout
 - [ ] Все atoms — instances существующих, не дубликаты
-- [ ] Variants именованы по convention (см. FIGMA-RULES.md)
+- [ ] Variants именованы по convention (см. `FIGMA-RULES.md`)
 - [ ] Properties именованы по convention
 - [ ] Description в Figma описывает usage
 
@@ -265,30 +271,30 @@ Open questions:
 - [ ] Все text — text styles
 - [ ] Spacing — auto-layout gaps кратны 4
 - [ ] Component tokens используются (не semantic напрямую)
+- [ ] Если добавил новый component-token → обновил `component-tokens.md` И `semantic-mappings.md`
 
-#### MVP alignment
-- [ ] Компонент решает 🟢 MVP job из jtbd.md
-- [ ] Нет visual conflict с editorial direction
-- [ ] Использует только Phosphor icons
+#### Spec md
+- [ ] Все 8 секций заполнены (Anatomy, Properties, Variants, States, Behaviour, Token references, A11y, Do/Don't)
+- [ ] A11y: role, aria-label, keyboard, focus
+- [ ] Don't section не пустая
 
 ### Step 5 — Hand off
 
-Возвращай:
-
 ```
-Component: PostCard
+Component: TweetCard
 
-Added to: Components / Molecules / PostCard
+Added to: Components / Molecules / TweetCard (Figma)
+Spec: design/04-components/molecules/tweet-card.md
 
-Variants: feed (default), detail, reply
-Properties: showActions, showCodeBlock, ownPost, liked
-Used token: post-card-bg, post-card-divider, …
+Variants: feed (default), detail, reply, skeleton
+Properties: showActions, hasMedia, ownTweet, liked
+Tokens used: post-card-bg, post-card-divider, post-card-padding-y/x, …
 
-Documented in: design/04-components/post-card.md
+New tokens added: (none / list if any) — обновил semantic-mappings.md
 
 Self-validation: 14/14 passed
 
-Open: reply variant snippet handling
+Open: reply variant snippet handling — solo или с parent snippet?
 ```
 
 ---
@@ -297,13 +303,13 @@ Open: reply variant snippet handling
 
 ### Trigger
 
-"Добавь variant X к Y" / "/extend-variant Button danger".
+"Добавь variant X к Y" / `/extend-variant Button danger`.
 
 ### Step 1 — Read
 
-- AGENT.md
-- Существующий компонент (`04-components/<name>.md`)
-- `component-tokens.md` — есть ли подходящий token для нового variant'а
+- `_ai/AGENT.md`
+- Существующий component spec (`design/04-components/atoms/<name>.md` или `molecules/`)
+- `design/03-tokens/component-tokens.md` — есть ли подходящий token
 
 ### Step 2 — Plan
 
@@ -311,55 +317,65 @@ Open: reply variant snippet handling
 Extend: Button
 New variant: danger
 
-Why: For destructive actions (Delete post, Delete account, Logout confirm).
+Why: For destructive actions (Delete tweet, Logout confirm).
 
-Tokens to add (if missing):
+Tokens needed:
 - button-danger-bg → error
-- button-danger-bg-hover → ? (нет error-hover в semantic — нужно добавить или использовать accent-hover нелогично)
-- button-danger-text → #FFFFFF
+- button-danger-bg-hover → ?  ← нет error-hover в semantic, нужно добавить
+- button-danger-text → #FFFFFF (через `text-on-accent`)
 
-Changes to master:
-- Add variant: danger
-- Existing instances НЕ ломаются (variant добавляется)
+Changes:
+- Master component: добавить variant `danger`
+- Existing instances НЕ ломаются (variant добавляется, не заменяется)
+- design/03-tokens/colours.md: добавить semantic `error-hover` (brick-600)
+- design/03-tokens/component-tokens.md: добавить button-danger-bg-hover
+- design/03-tokens/semantic-mappings.md: добавить строку в §1 Button
 
 Where used:
 - ConfirmDialog destructive action
-- Profile settings "Delete account" link
-- Post menu "Delete"
+- Tweet menu "Delete"
+- Profile settings "Logout"
 
-Open: нужен ли button-danger-bg-hover token? Если да — добавить в colours.md
+Open: нужен ли отдельный focus-ring-error для button-danger или общий focus-ring?
 ```
 
 ### Step 3 — Execute
 
-- Open master component
-- Add variant via Properties panel
-- Use new component tokens (если нужны — сначала добавь их в `component-tokens.md`)
-- Update Figma description с новым variant'ом
+- Открой master component в Figma
+- Add variant через Properties panel
+- Использовать новые component tokens (если нужны — сначала добавь их в `component-tokens.md`
+  и `semantic-mappings.md` одной правкой)
+- Update Figma description
+- Update component spec md (`design/04-components/atoms/button.md`)
 
 ### Step 4 — Validate
 
 - [ ] Existing instances renderятся правильно (variant добавлен, не заменён)
 - [ ] Naming variants консистентно (lowercase, как остальные)
 - [ ] Component tokens documented
+- [ ] semantic-mappings.md обновлён
+- [ ] Spec md обновлён (Variants section)
 
 ### Step 5 — Hand off
 
 ```
 Button: added variant `danger`
 
-New component tokens:
+New component tokens (added to component-tokens.md):
 - button-danger-bg → error
-- button-danger-bg-hover → NEW: error-hover (#... added to colours.md)
-- button-danger-text → #FFFFFF
+- button-danger-bg-hover → error-hover (NEW semantic)
+- button-danger-text → text-on-accent
+
+New semantic added to colours.md: error-hover (light: brick-600 #8B2D24 / dark: brick-300 #D8615E)
 
 Existing instances: 0 changes
-New variant available for: ConfirmDialog, account settings, post menu
+New variant available for: ConfirmDialog, tweet menu, profile settings
 
 Files updated:
-- 04-components/button.md
-- 03-tokens/component-tokens.md
-- 03-tokens/colours.md (added error-hover token)
+- design/04-components/atoms/button.md
+- design/03-tokens/colours.md
+- design/03-tokens/component-tokens.md
+- design/03-tokens/semantic-mappings.md
 ```
 
 ---
@@ -368,87 +384,201 @@ Files updated:
 
 ### Trigger
 
-"Проверь экран X" / "/validate-screen <name>".
+"Проверь экран X" / `/validate-screen <name>` / "Сделай ревью этого Figma frame".
 
 ### Step 1 — Read
 
-- AGENT.md
-- Все 5 baseline (VISION, PRINCIPLES, COPY, tokens)
+- `_ai/AGENT.md`
+- `design/03-tokens/` (8 файлов — для проверки токенов)
+- `docs/shared/DESIGN-CONTRACT.md` — naming, states, icons
 - Конкретный артефакт для проверки
 
 ### Step 2 — Run checklist
 
-См. полный checklist из Workflow 1 Step 4 + специфические для типа:
+Используй чеклист из Workflow 1 Step 4. Дополнительно для типа:
 
 | Type | Спец-checklist |
 |------|---------------|
-| Screen | All 4 states present? Mobile adaptation? |
-| Component | Auto-layout everywhere? Variants consistent? |
-| Copy | Через COPY-GUIDE banlist? |
-| Token | Используется semantic, не primitive? |
+| Screen | All обязательные states? Mobile-first размеры? Naming пейджей? |
+| Component | Auto-layout everywhere? Variants consistent? Description заполнено? |
+| Copy | Banlist слов? Императив в кнопках? Без emoji? |
+| Token usage | Только semantic в компонентах? Только component-token в master'ах? Нет hex? |
 
 ### Step 3 — Output
 
 Список нарушений с конкретными цитатами:
 
 ```
-ProfileScreen / Default — violations:
+TimelineScreen / Default — violations:
 
-1. [tokens/colours.md §5] Header bg использует raw #FFFFFF — должен быть surface-elevated (#FDFAF5)
-2. [01-research/anti-patterns.md AP-2.1] Follower count показан в profile header как primary metric — должен быть secondary
-3. [00-brief/COPY-GUIDE.md §10] Button label "Get started!" в banlist — заменить на "Sign up"
-4. [03-tokens/typography.md §2] Score number использует `body-bold` — должен быть `serif-figure`
-5. [01-research/positive-patterns.md PP-1.3] Endorsement list не показывает endorser identity — добавить avatar + score
+| 🔴 | Header bg | raw hex `#FFFFFF` | colours.md §5 | use semantic `surface-elevated` |
+| 🔴 | TweetCard | использует Material `Icons.favorite` | icons.md, ICON-STRATEGY.md | use Phosphor `Heart` via UiIcon |
+| 🟡 | Empty CTA | label "Get started!" | DESIGN-CONTRACT.md / copy banlist | replace "Find people" |
+| 🟡 | Avatar size | 32px | component-tokens.md avatar-size-md=40 | scale to 40 |
+| 🟢 | Top bar | без focus ring | a11y | add focus indicator |
 
-Suggestion: исправь п.1-3 как обязательные, п.4-5 повышают качество.
+Recommendation: fix 🔴 before merge; 🟡 high priority; 🟢 best-effort.
 ```
 
 ### Step 4 — Hand off
 
-Не "fix it" silently. Возвращай list и спрашивай user'а что фиксить.
+Не "fix it" silently. Возвращай list и спрашивай user'а, что фиксить.
 
 ---
 
-## Workflow 5 — Write UI Copy
+## Workflow 5 — Figma → Code spec
 
 ### Trigger
 
-"Напиши label для X" / "/copy <context>".
+"Сконвертируй этот Figma node в Flutter" / `/figma-to-code <node-id>`.
 
 ### Step 1 — Read
 
-- `00-brief/COPY-GUIDE.md` — обязательно
+- `_ai/AGENT.md`
+- `docs/shared/DESIGN-CONTRACT.md §1` (naming convention)
+- `design/03-tokens/semantic-mappings.md` (mapping table)
+- `docs/flutter/ICON-STRATEGY.md` (для иконок)
+- `docs/flutter/ARCHITECTURE_RULES.md` (где лежит UI код)
+- Целевой пакет — `packages/ui_kit/lib/src/` для атомов, `apps/chirp/lib/features/` для feature-виджетов
+- См. `docs/PROMPT-TEMPLATES.md §10` для готового промта
+
+### Step 2 — Plan
+
+```
+Figma node: Components/Atoms/Button (variant=primary, state=default)
+Target: packages/ui_kit/lib/src/buttons/ui_button.dart
+
+Mapping:
+- Frame → class UiButton extends StatelessWidget
+- variant property → enum UiButtonVariant { primary, secondary, text, danger }
+- size property → enum UiButtonSize { compact, default_, large }
+- BG fill `button-primary-bg` → context.colors.buttonPrimaryBg
+- Label text style `Button (15/600)` → context.typography.button
+- Padding-x 16, height 40 → const EdgeInsets.symmetric(horizontal: Spacing.lg)
+- Border-radius `radius-sm` (4) → BorderRadius.circular(Radius.sm)
+- Focus ring `focus-ring` → FocusRing widget
+
+Иконки в кнопке (если есть leading/trailing):
+- UiIcon(UiIcons.<name>, size: UiIconSize.sm)
+- Никаких Icons.foo
+
+Open: disabled-state — opacity или отдельный bg? → `button-primary-bg-disabled` = `disabled-bg`, явный bg
+```
+
+### Step 3 — Execute
+
+- Создай или обнови файл по target path
+- Никакого hex / px / font-family в коде
+- Все semantic — через `context.colors.*` extension
+- Иконки через `UiIcon(UiIcons.*, size: UiIconSize.*)`
+- Проверь, что есть ассеты для иконок в `packages/ui_kit/assets/icons/`
+
+### Step 4 — Validate
+
+- [ ] Нет hex-литералов в файле
+- [ ] Нет magic px (только 0/1, остальное через токены)
+- [ ] Все state'ы реализованы (default/hover/pressed/disabled/focused)
+- [ ] Semantic widget c label/role
+- [ ] Golden test (если есть в проекте) — diff < 3 px
+- [ ] `flutter analyze` зелёный
+- [ ] `dart format` применён
+
+### Step 5 — Hand off
+
+```
+Created: packages/ui_kit/lib/src/buttons/ui_button.dart
+Spec sync: design/04-components/atoms/button.md (no changes — code следует за дизайном)
+
+Mapping table:
+| Figma part | Code |
+| BG primary | context.colors.buttonPrimaryBg |
+| Label | context.typography.button |
+| ...
+
+Tokens used: 7 component-tokens (все существующие)
+New assets: (none)
+Tests: golden + a11y
+
+Open: leading-icon convention — spacing.sm между иконкой и текстом? Confirm.
+```
+
+---
+
+## Workflow 6 — Code → Figma master
+
+### Trigger
+
+"Сделай Figma master по этому виджету" / `/code-to-figma <path>`.
+
+### Step 1 — Read
+
+- `_ai/AGENT.md`
+- Целевой файл (.dart / .tsx / .swift)
+- `docs/shared/DESIGN-CONTRACT.md` (naming)
+- `design/03-tokens/` (для нахождения соответствующих styles)
+- См. `docs/PROMPT-TEMPLATES.md §11`
+
+### Step 2 — Plan
+
+Mapping code → Figma в плане (props → properties/variants, hex → semantic styles, и т.д.).
+
+### Step 3 — Execute
+
+Создаёшь Figma master через MCP. Каждый visible part = именованный layer.
+Layer naming совпадает с code class name (см. `DESIGN-CONTRACT.md §1`).
+
+### Step 4 — Validate
+
+- [ ] Variants покрывают все state-enum'ы кода
+- [ ] Token-references вместо raw values (если в коде была magic — отметить как открытый вопрос)
+- [ ] Component description заполнено
+
+### Step 5 — Hand off
+
+Возвращаешь mapping + расхождения, которые потребовали интерпретации.
+
+---
+
+## Workflow 7 — Write UI Copy
+
+### Trigger
+
+"Напиши label для X" / `/copy <context>`.
+
+### Step 1 — Read
+
+- `docs/shared/ERRORS.md` (для error messages)
+- `docs/shared/SCREENS.md` (для empty states)
 - Контекст — какой экран, какое действие
 
 ### Step 2 — Draft
 
-Используй шаблоны из COPY-GUIDE:
-- Button → §2
-- Error → §3
-- Empty → §4
-- Placeholder → §5
-- Label → §6
-- Confirm → §8
+Принципы:
+- **Buttons:** глагол в императиве (Save, Cancel, Find people)
+- **Errors:** факт + действие ("Couldn't load. Retry.")
+- **Empty:** факт + опц. действие ("No tweets yet. Find people to follow.")
+- **Placeholder:** что вводить, без "please" ("Email", не "Please enter your email")
+- **Confirm:** что произойдёт, явно ("Delete tweet?" + "Delete" / "Cancel")
 
 ### Step 3 — Self-validate
 
-- [ ] Не в banlist §10
-- [ ] Без emoji
-- [ ] Без восклицаний
+- [ ] Не банлист ("Welcome back!", "Get started!", "Awesome!", "Oops!", emoji)
 - [ ] Под лимитом длины (3-6 слов для button, 1 sentence для description)
+- [ ] Без восклицаний
+- [ ] Без passive voice ("This will be deleted" → "Delete this?")
 
 ### Step 4 — Hand off
 
 Дай **2-3 опции** где это разумно. Не одну "лучшую".
 
 ```
-Empty state for "Notifications screen (no notifications)":
+Empty state for "Timeline (logged-in, not following anyone)":
 
-Option A (factual): "Nothing new."
-Option B (with hint): "No notifications. Endorse a post to start engaging."
-Option C (minimal): (no text, just empty space — list view shows empty list)
+Option A (factual): "Your timeline is empty."
+Option B (with hint): "Follow people to see their tweets here."
+Option C (with CTA): "Follow people to see their tweets here." + button "Find people"
 
-Recommended: A (matches COPY-GUIDE §4 minimal-action принцип)
+Recommended: C — следует pattern "empty state = факт + действие".
 ```
 
 ---
@@ -457,6 +587,9 @@ Recommended: A (matches COPY-GUIDE §4 minimal-action принцип)
 
 1. **Никогда не молчи.** Каждая работа → план → execute → validate → hand off.
 2. **Никогда не делай "тихо".** User должен видеть, что ты собираешься делать.
-3. **Никогда не нарушай anti-patterns**, даже если user просит. Поднимай вопрос.
-4. **Если устал** проверять checklist — у тебя нет права устать. Прогоняй каждый раз.
-5. **Если что-то не описано в `design/*`** — поднимай вопрос, не предполагай.
+3. **Никогда не возвращай pivot-сущности** (`Endorse`, `ScoreFigure`, `Expertise`). Если задача требует — переспроси, нужен ли возврат к концепции.
+4. **Никогда не используй Twitter-blue палитру** (`#1DA1F2` и т.п.), даже если она встречается в legacy `docs/shared/DESIGN-SYSTEM.md` примерах.
+5. **Если устал** проверять чеклист — у тебя нет права устать. Прогоняй каждый раз.
+6. **Если что-то не описано в `design/*` или `docs/shared/`** — поднимай вопрос, не предполагай.
+
+Promt-шаблоны на каждый workflow — `docs/PROMPT-TEMPLATES.md`.
