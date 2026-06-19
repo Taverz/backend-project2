@@ -193,7 +193,7 @@ component implementation
 | `complexity-font` | `caption-bold` |
 | `complexity-radius` | `radius-xs` (2) |
 
-Note: единственное место с status-coloured badges в Bable. Не дублировать pattern в других tags.
+Note: единственное место с status-coloured badges в Chirp. Не дублировать pattern в других tags.
 
 ---
 
@@ -260,16 +260,20 @@ Note: единственное место с status-coloured badges в Bable. Н
 
 ---
 
-## Component tokens — Endorsement
+## Component tokens — Tweet actions (Like / Reply / Retweet / Share)
+
+Применяется ко всем action-кнопкам в `TweetCard` action row.
 
 | Token | → Semantic |
 |-------|-----------|
-| `endorse-icon-default` | `text-secondary` |
-| `endorse-icon-active` | `accent` |
-| `endorse-count-color` | `text-secondary` |
-| `endorse-count-font` | `caption` |
-| `endorse-button-gap` | `space-1` (4) между иконкой и числом |
-| `endorse-active-scale-burst` | 1.1 (peak, 200ms) |
+| `tweet-action-icon-default` | `text-secondary` |
+| `tweet-action-icon-active` | `accent` (например liked, retweeted) |
+| `tweet-action-icon-hover` | `text-primary` (web) |
+| `tweet-action-count-color` | `text-secondary` |
+| `tweet-action-count-font` | `caption` |
+| `tweet-action-button-gap` | `space-1` (4) между иконкой и числом |
+| `tweet-action-row-gap` | `space-5` (24) между кнопками |
+| `tweet-action-active-scale-burst` | 1.15 (peak, 200ms) — для Like при нажатии |
 
 ---
 

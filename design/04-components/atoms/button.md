@@ -230,7 +230,7 @@ Button — это trigger. Логика самого действия (POST requ
 - 1–2 слова, максимум 4
 - НЕ: "Click to save", "Submit", "OK"
 
-### Bable canonical labels
+### Chirp canonical labels
 
 | Action | Label | Variant |
 |--------|-------|---------|
@@ -312,7 +312,7 @@ Button — это trigger. Логика самого действия (POST requ
 ```
 Button
 
-Atom for all user-triggered actions in Bable.
+Atom for all user-triggered actions in Chirp.
 
 Variants:
 - primary — main action on screen (1 per screen rule)

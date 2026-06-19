@@ -164,28 +164,47 @@ export function useTimeline() {
 
 ## Styling (Tailwind)
 
+Tailwind config = генерация из `design/03-tokens/`. **Никаких raw hex в коде:**
+только semantic-классы (`bg-accent`, `text-primary` и т.п.).
+
 ```typescript
-// tailwind.config.ts
+// tailwind.config.ts — semantic tokens, hex берутся из design/03-tokens/colours.md
+// (значения ниже — пример; синхронизировать с canon при генерации)
 export default {
   theme: {
     extend: {
       colors: {
-        primary: '#1DA1F2',
-        background: '#FFFFFF',
-        'background-dark': '#15202B',
-        card: '#F5F5F5',
-        'card-border': '#E1E8ED',
-        'text-primary': '#0F1419',
-        'text-secondary': '#536471',
-        error: '#E0245E',
+        // Semantic — light theme (см. design/03-tokens/colours.md §5)
+        accent:              'var(--accent)',
+        'accent-hover':      'var(--accent-hover)',
+        'accent-soft':       'var(--accent-soft)',
+        surface:             'var(--surface)',
+        'surface-elevated':  'var(--surface-elevated)',
+        'surface-sunken':    'var(--surface-sunken)',
+        'surface-hover':     'var(--surface-hover)',
+        'border-subtle':     'var(--border-subtle)',
+        'border-default':    'var(--border-default)',
+        'text-primary':      'var(--text-primary)',
+        'text-secondary':    'var(--text-secondary)',
+        'text-muted':        'var(--text-muted)',
+        'text-on-accent':    'var(--text-on-accent)',
+        error:               'var(--error)',
+        'error-soft':        'var(--error-soft)',
+        success:             'var(--success)',
+        warning:             'var(--warning)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],          // headlines, figures
+        sans:  ['Inter', 'system-ui', 'sans-serif'],               // body, UI
+        mono:  ['"JetBrains Mono"', 'ui-monospace', 'monospace'],  // code blocks
       },
     },
   },
 };
 ```
+
+CSS custom properties (`--accent`, `--surface`, …) задаются в `:root` (light) и
+`[data-theme="dark"]` (dark) с конкретными hex из `design/03-tokens/colours.md` §5-6.
 
 ---
 

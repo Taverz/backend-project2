@@ -172,25 +172,34 @@ Platforms: mobile (bottom tab), web (main column)
 
 #### 6. DESIGN-SYSTEM.md — как выглядит UI
 
-```markdown
-## Colors
+> Конкретные значения — в `design/03-tokens/`. Здесь только семантика.
 
-| Token | Hex | Назначение |
-|-------|-----|-----------|
-| Primary | #1DA1F2 | Twitter blue, кнопки, ссылки |
-| Background | #FFFFFF / #15202B | Светлая / тёмная тема |
-| Card | #F5F5F5 / #192734 | Карточки твитов |
-| Error | #E0245E | Ошибки, удаление |
-| Text primary | #0F1419 / #FFFFFF | Основной текст |
+```markdown
+## Colors (semantic, не hex)
+
+| Token | Назначение |
+|-------|-----------|
+| accent | CTA, ссылки, focus |
+| surface | Фон страницы |
+| surface-elevated | Карточки твитов, модалки |
+| border-subtle / border-default | Разделители и границы |
+| text-primary | Основной текст |
+| text-secondary | Подписи, timestamps |
+| error / success / warning | Статусы |
+
+Источник истины: design/03-tokens/colours.md.
 
 ## Typography
 
-| Token | Size | Weight | Использование |
-|-------|------|--------|--------------|
-| h1 | 24px | 700 | Заголовки экранов |
-| body | 16px | 400 | Текст твита |
-| caption | 13px | 400 | Timestamp, подписи |
-| button | 15px | 600 | Кнопки |
+| Token | Использование |
+|-------|--------------|
+| h1 / h2 / h3 | Заголовки экранов (serif) |
+| body / body-bold | Текст твита (Inter) |
+| caption / caption-bold | Timestamp, подписи (Inter) |
+| button | Кнопки (Inter 600) |
+| mono | Code blocks (JetBrains Mono) |
+
+Источник истины: design/03-tokens/typography.md.
 
 ## Components
 

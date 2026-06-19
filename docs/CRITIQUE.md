@@ -113,7 +113,7 @@ Image.error()   → fallback иконка + retry
 
 ### 3.2. Нет cross-reference между файлами
 
-DESIGN-SYSTEM.md определяет `primary = #1DA1F2`.
+DESIGN-SYSTEM.md определяет semantic `accent` (см. `design/03-tokens/colours.md`).
 DESIGN-CONTRACT.md ссылается на DESIGN-SYSTEM.md — это хорошо.
 Но ERRORS.md не ссылается на Design System, API.md не ссылается на ERRORS.md.
 

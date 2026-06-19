@@ -10,21 +10,24 @@
 
 | # | State | Trigger | Visual | Behaviour |
 |---|-------|---------|--------|-----------|
-| 1.1 | **enabled** | Экран загружен | Primary bg (#1DA1F2), white text, radius=24px, height=44px | Tap → onSubmit |
-| 1.2 | **disabled** | Форма невалидна / поле пусто | Opacity 0.5, grey, no pointer | Tap ignored |
+| 1.1 | **enabled** | Экран загружен | `button-primary-bg`, `text-on-accent`, `radius-sm`, height 40 | Tap → onSubmit |
+| 1.2 | **disabled** | Форма невалидна / поле пусто | `button-primary-bg-disabled`, `text-disabled`, no pointer | Tap ignored |
 | 1.3 | **loading** | Tap, запрос отправлен | Spinner вместо текста, disabled | Tap ignored |
-| 1.4 | **with-icon** | Кнопка + иконка | Icon слева, 4px gap, текст справа | Same as enabled |
-| 1.5 | **hover** (web only) | Cursor on button | Slightly darker bg (#1A91DA) | — |
-| 1.6 | **pressed** | Tap start | Slightly darker bg, scale 0.98 | — |
+| 1.4 | **with-icon** | Кнопка + иконка | UiIcon слева, `space-2` gap, текст справа | Same as enabled |
+| 1.5 | **hover** (web only) | Cursor on button | `button-primary-bg-hover` | — |
+| 1.6 | **pressed** | Tap start | `button-primary-bg-pressed`, scale 0.98 | — |
+| 1.7 | **focused** | Keyboard focus | `focus-ring` 2px outline + 2px offset | — |
 
 **Variants:**
 
 ```
-Primary:  bg=#1DA1F2, text=white     — "Log in", "Sign up", "Tweet"
-Outline:  border=#1DA1F2, text=#1DA1F2 — "Follow" / "Following" (green when active)
-Text:     no bg, text=#1DA1F2         — "Cancel", link-style
-Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
+Primary:    bg=accent, text=text-on-accent      — "Log in", "Sign up", "Tweet"
+Secondary:  bg=transparent, border=border-default, text=text-primary — "Cancel"
+Text:       no bg, text=accent                  — link-style
+Danger:     bg=error, text=text-on-accent       — "Delete", "Log out" (confirm)
 ```
+
+Полная цепочка токенов — `design/03-tokens/semantic-mappings.md §1`.
 
 **Platform mapping:**
 
@@ -42,13 +45,15 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 | # | State | Trigger | Visual | Error message |
 |---|-------|---------|--------|--------------|
-| 2.1 | **default** | Экран загружен | Border=#E1E8ED, radius=4px, height=44px, placeholder grey | Нет |
-| 2.2 | **focused** | Tap on field | Border=#1DA1F2, label moves up (float) | Нет |
-| 2.3 | **filled** | User typed | Border=#E1E8ED, text visible | Нет |
-| 2.4 | **error** | Validation failed / server 400 | Border=#E0245E, error text below (12px, #E0245E) | Да |
-| 2.5 | **disabled** | Form submitting | Opacity 0.5, not editable | — |
-| 2.6 | **with-counter** | Username field | Small counter bottom-right: "7/30" | — |
-| 2.7 | **password** | Password field | Obscured text, eye icon toggle | — |
+| 2.1 | **default** | Экран загружен | Border `border-default`, `radius-sm`, height 40, placeholder `text-muted` | Нет |
+| 2.2 | **focused** | Tap on field | Border `input-border-focused` (= accent), label floats up, focus-ring | Нет |
+| 2.3 | **filled** | User typed | Border `border-default`, text `text-primary` | Нет |
+| 2.4 | **error** | Validation failed / server 400 | Border `error`, error text below (`caption`, `error`) | Да |
+| 2.5 | **disabled** | Form submitting | `input-bg-disabled`, `text-disabled`, not editable | — |
+| 2.6 | **with-counter** | Username field | Small counter bottom-right: "7/30", `text-muted` | — |
+| 2.7 | **password** | Password field | Obscured text, UiIcon (Eye/EyeSlash) toggle справа | — |
+
+Полная цепочка токенов — `design/03-tokens/semantic-mappings.md §2`.
 
 **Error timing:**
 
@@ -66,24 +71,28 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 ```
 ┌──────────────────────────────────────────┐
-│ [Avatar 48x48]  username              ··· │
-│                 @handle   · 2m ago        │
+│ [Avatar 40]   username  @handle · 2m     │
+│               More menu (DotsThree)  ··· │
 │                                          │
 │   Tweet body text goes here.              │
 │   Up to 280 characters.                   │
 │                                          │
-│   ♥ 5    💬 2    🔁 1    📤             │
+│   Heart 5   ChatText 2   ArrowsClockwise │
+│                          Share           │
 └──────────────────────────────────────────┘
 ```
 
+Все иконки — Phosphor Regular (см. `design/03-tokens/icons.md`).
+Никаких emoji в UI chrome.
+
 | # | State | Trigger | Visual | Interaction |
 |---|-------|---------|--------|-------------|
-| 3.1 | **default** | Loaded | Full card, all elements visible | Tap → /tweet/{id} |
-| 3.2 | **loading** | Fetching | Skeleton: grey gradient blocks (same dimensions) | None |
+| 3.1 | **default** | Loaded | Full card, `post-card-bg`, all elements visible | Tap → /tweet/{id} |
+| 3.2 | **loading** | Fetching | Skeleton: warm gradient blocks (same dimensions) | None |
 | 3.3 | **error** | Load failed | Error icon + "Couldn't load tweet" + Retry | Retry tap → reload |
-| 3.4 | **liked** | Tap like | Heart icon filled (❤️ red), count +1 | Tap → unlike |
-| 3.5 | **unliked** | Tap unlike | Heart icon outlined (♡), count -1 | Tap → like |
-| 3.6 | **deleting** | Tap delete | Card fade out (opacity 0→1→0) | — |
+| 3.4 | **liked** | Tap like | Phosphor `Heart` filled (`accent`), count +1 | Tap → unlike |
+| 3.5 | **unliked** | Tap unlike | Phosphor `Heart` outlined (`text-secondary`), count -1 | Tap → like |
+| 3.6 | **deleting** | Tap delete | Card fade out (opacity 1→0) | — |
 | 3.7 | **with-image** | Tweet has media | Image below body, 16:9 ratio | Tap → fullscreen |
 
 **Like optimistic update:**
@@ -100,10 +109,10 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 | Part | Spec |
 |------|------|
-| Size | 48×48 |
-| Shape | Circle |
+| Size | `avatar-size-md` (40) |
+| Shape | `radius-full` |
 | Image | Load async, show initials until loaded |
-| Initials | First letter of username, white on primary bg |
+| Initials | First letter of username, `text-on-accent` on hash-based fallback colour |
 | Fallback | If load fails → keep initials |
 | Tap | Navigate to /user/{id} |
 
@@ -113,9 +122,9 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 | # | State | Trigger | Visual |
 |---|-------|---------|--------|
-| 4.1 | **with-image** | Image loaded | Circle, 48×48 (list) or 96×96 (profile) |
-| 4.2 | **initials** | No image / loading | Circle, primary bg (#1DA1F2), white letter |
-| 4.3 | **loading** | Image fetching | Circle, grey skeleton |
+| 4.1 | **with-image** | Image loaded | Circle, `avatar-size-md` (40, list) или `avatar-size-xl` (96, profile) |
+| 4.2 | **initials** | No image / loading | Circle, hash-based fallback bg (см. avatar.md), `text-on-accent` letter |
+| 4.3 | **loading** | Image fetching | Circle, `surface-sunken` skeleton |
 | 4.4 | **error** | Image load failed | Keep initials fallback, no retry |
 
 ---
@@ -143,13 +152,15 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 **Empty messages by screen:**
 
-| Screen | Icon | Message | CTA |
-|--------|------|---------|-----|
-| Home timeline | 📭 | "No tweets yet. Follow someone to see their tweets." | "Find people" → /search |
-| Notifications | 🔕 | "No notifications yet" | — |
-| Search | 🔍 | "Search Chirp" (before typing) | — |
-| Followers | 👤 | "No followers yet" | — |
-| Tweet replies | 💬 | "No replies yet" | — |
+Иконки — Phosphor (см. `design/03-tokens/icons.md`). Никаких emoji в UI chrome.
+
+| Screen | Phosphor icon | Message | CTA |
+|--------|---------------|---------|-----|
+| Home timeline | `Tray` | "No tweets yet. Follow someone to see their tweets." | "Find people" → /search |
+| Notifications | `BellSlash` | "No notifications yet" | — |
+| Search | `MagnifyingGlass` | "Search Chirp" (before typing) | — |
+| Followers | `Users` | "No followers yet" | — |
+| Tweet replies | `ChatText` | "No replies yet" | — |
 
 ---
 
@@ -157,19 +168,21 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 | State | Visual | Active indicator |
 |-------|--------|-----------------|
-| inactive | Icon outline, grey text | — |
-| active | Icon filled, primary (#1DA1F2) | Line/underline (web) or icon fill |
-| badge | Unread count bubble, red (#E0245E) | Number or dot |
+| inactive | Icon outline, `nav-icon-default` (= `text-muted`), label `nav-label-default` | — |
+| active | Icon filled (Phosphor Bold weight), `nav-icon-active` (= `text-primary`) | `nav-active-indicator` (`accent` underline или dot) |
+| badge | Unread count bubble, `error` bg | Number или dot |
 | disabled | Hidden (tab not available) | — |
 
 **Tabs (mobile):**
 
-| Tab | Icon | Badge |
-|-----|------|-------|
-| Home | 🏠 / house | — |
-| Search | 🔍 / magnifyingglass | — |
-| Notifications | 🔔 / bell | Unread count |
-| Profile | 👤 / person | — |
+Иконки — только Phosphor (см. `design/03-tokens/icons.md §3 Navigation`).
+
+| Tab | Phosphor icon | Badge |
+|-----|---------------|-------|
+| Home | `House` | — |
+| Search | `MagnifyingGlass` | — |
+| Notifications | `Bell` / `Bell` (Bold weight when active) | Unread count |
+| Profile | `User` | — |
 
 ---
 
@@ -177,9 +190,9 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 | # | State | Visual | Behaviour |
 |---|-------|--------|-----------|
-| 8.1 | **follow** | Outline: border=#1DA1F2, text=#1DA1F2, "Follow" | Tap → POST /users/{id}/follow |
-| 8.2 | **following** | Filled: bg=green, text=white, "Following" | Tap → confirm → DELETE /users/{id}/follow |
-| 8.3 | **pending** | Disabled: grey, spinner | После tap, до ответа сервера |
+| 8.1 | **follow** | Secondary variant: `border-default`, `text-primary`, label "Follow" | Tap → POST /users/{id}/follow |
+| 8.2 | **following** | Primary variant: `accent` bg, `text-on-accent`, label "Following" | Tap → confirm → DELETE /users/{id}/follow |
+| 8.3 | **pending** | Disabled: `disabled-bg`, spinner | После tap, до ответа сервера |
 | 8.4 | **hidden** | Not rendered | Own profile (нельзя подписаться на себя) |
 
 **Optimistic update:**
@@ -198,7 +211,7 @@ Danger:   bg=#E0245E, text=white      — "Delete", "Log out" (confirm)
 
 | Part | Spec |
 |------|------|
-| Icon | ❤️ (like), 👤 (follow), 💬 (reply) |
+| Icon | Phosphor `Heart` (like), `UserPlus` (follow), `ChatText` (reply) |
 | Text | "{actor} liked your tweet" / "{actor} followed you" |
 | Timestamp | Relative: "2m ago", "yesterday", "June 5" |
 | Unread | Bold text, slightly different bg |

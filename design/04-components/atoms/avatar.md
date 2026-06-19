@@ -234,5 +234,5 @@ Docs: design/04-components/atoms/avatar.md
 ## 11. Open questions
 
 - [ ] Online indicator (presence dot) — добавляем когда-нибудь? Default — нет
-- [ ] Group avatar (overlapping) — пока не нужен в MVP, добавим если понадобится в notifications "X and 3 others endorsed"
-- [ ] Verified checkmark — нет verification в Bable (см. `01-research/anti-patterns.md` AP-5.1)
+- [ ] Group avatar (overlapping) — пока не нужен в MVP, добавим если понадобится в notifications "X and 3 others liked"
+- [ ] Verified checkmark — нет blue-check verification в Chirp на MVP-стадии

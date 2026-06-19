@@ -29,42 +29,85 @@
 
 ## 2. Design Tokens
 
-Цвета, шрифты, отступы — через именованные токены.
-Дизайнер использует токен — разработчик использует тот же токен.
+Цвета, шрифты, отступы — через **semantic-токены**.
+Конкретные hex / px / font-family — в `design/03-tokens/` (источник истины).
+Этот раздел показывает только маппинг **Figma style ↔ code variable**.
 
 ### Colors
 
-| Token name | Figma name | Hex | Code variable |
-|-----------|-----------|-----|---------------|
-| `primary` | `Primary` | `#1DA1F2` | `AppTheme.primary` / `Color.primary` / `Colors.primary` |
-| `background` | `Background` | `#FFFFFF` / `#15202B` | `AppTheme.background` |
-| `card` | `Card` | `#F5F5F5` / `#192734` | `AppTheme.card` |
-| `cardBorder` | `CardBorder` | `#E1E8ED` / `#38444D` | `AppTheme.cardBorder` |
-| `textPrimary` | `TextPrimary` | `#0F1419` / `#E7E9EA` | `AppTheme.textPrimary` |
-| `textSecondary` | `TextSecondary` | `#536471` / `#71767B` | `AppTheme.textSecondary` |
-| `error` | `Error` | `#E0245E` / `#F4212E` | `AppTheme.error` |
-| `success` | `Success` | `#00BA7C` | `AppTheme.success` |
+Полный список semantic-токенов и их primitives — `design/03-tokens/colours.md` §5-6.
+Mapping semantic → component → primitive — `design/03-tokens/semantic-mappings.md`.
+
+| Semantic token | Figma style name | Code variable |
+|---------------|------------------|---------------|
+| `accent` | `Accent` | `context.colors.accent` |
+| `accent-hover` | `Accent/Hover` | `context.colors.accentHover` |
+| `accent-soft` | `Accent/Soft` | `context.colors.accentSoft` |
+| `surface` | `Surface` | `context.colors.surface` |
+| `surface-elevated` | `Surface/Elevated` | `context.colors.surfaceElevated` |
+| `surface-sunken` | `Surface/Sunken` | `context.colors.surfaceSunken` |
+| `surface-hover` | `Surface/Hover` | `context.colors.surfaceHover` |
+| `border-subtle` | `Border/Subtle` | `context.colors.borderSubtle` |
+| `border-default` | `Border/Default` | `context.colors.borderDefault` |
+| `text-primary` | `Text/Primary` | `context.colors.textPrimary` |
+| `text-secondary` | `Text/Secondary` | `context.colors.textSecondary` |
+| `text-muted` | `Text/Muted` | `context.colors.textMuted` |
+| `text-on-accent` | `Text/OnAccent` | `context.colors.textOnAccent` |
+| `error` / `error-soft` | `Error` / `Error/Soft` | `context.colors.error` / `errorSoft` |
+| `success` / `success-soft` | `Success` / `Success/Soft` | `context.colors.success` / `successSoft` |
+| `warning` / `warning-soft` | `Warning` / `Warning/Soft` | `context.colors.warning` / `warningSoft` |
+
+**Запрещено:** raw hex в коде или Figma-фреймах. Всё — через semantic-токен.
 
 ### Typography
 
-| Token name | Figma style | Size/Weight | Code |
-|-----------|------------|:-----------:|------|
-| `h1` | `H1` | 24/700 | `TextStyle(fontSize: 24, fontWeight: FontWeight.w700)` |
-| `body` | `Body` | 16/400 | `TextStyle(fontSize: 16, fontWeight: FontWeight.w400)` |
-| `bodyBold` | `BodyBold` | 16/700 | `TextStyle(fontSize: 16, fontWeight: FontWeight.w700)` |
-| `caption` | `Caption` | 13/400 | `TextStyle(fontSize: 13, fontWeight: FontWeight.w400)` |
-| `button` | `Button` | 15/600 | `TextStyle(fontSize: 15, fontWeight: FontWeight.w600)` |
+Полная type scale — `design/03-tokens/typography.md`. Шрифты:
+- Serif (headlines/figures) — см. `typography.md §1`
+- Inter (body / UI) — sans
+- JetBrains Mono — code blocks
+
+| Semantic token | Figma text style | Code variable |
+|---------------|------------------|---------------|
+| `h1` / `h2` / `h3` | `H1` / `H2` / `H3` | `context.typography.h1/h2/h3` |
+| `body-lg` | `Body/Large` | `context.typography.bodyLg` |
+| `body` | `Body` | `context.typography.body` |
+| `body-bold` | `Body/Bold` | `context.typography.bodyBold` |
+| `caption` | `Caption` | `context.typography.caption` |
+| `caption-bold` | `Caption/Bold` | `context.typography.captionBold` |
+| `button` | `Button` | `context.typography.button` |
+| `mono` | `Mono` | `context.typography.mono` |
+| `serif-figure` | `Serif/Figure` | `context.typography.serifFigure` |
+
+**Запрещено:** raw fontSize / fontWeight / fontFamily в коде.
 
 ### Spacing
 
-| Token | Pixels | Figma name | Code |
-|-------|:------:|-----------|------|
-| `spaceXs` | 4 | `4px` | `Spacing.xs` |
-| `spaceSm` | 8 | `8px` | `Spacing.sm` |
-| `spaceMd` | 12 | `12px` | `Spacing.md` |
-| `spaceLg` | 16 | `16px` | `Spacing.lg` |
-| `spaceXl` | 24 | `24px` | `Spacing.xl` |
-| `spaceXxl` | 32 | `32px` | `Spacing.xxl` |
+Полная шкала — `design/03-tokens/spacing.md`. Base = 4px.
+
+| Token | px | Figma variable | Code |
+|-------|:--:|----------------|------|
+| `space-1` | 4 | `space-1` | `Spacing.xs` |
+| `space-2` | 8 | `space-2` | `Spacing.sm` |
+| `space-3` | 12 | `space-3` | `Spacing.md` |
+| `space-4` | 16 | `space-4` | `Spacing.lg` |
+| `space-5` | 24 | `space-5` | `Spacing.xl` |
+| `space-6` | 32 | `space-6` | `Spacing.xxl` |
+| `space-7` | 48 | `space-7` | `Spacing.xxxl` |
+| `space-9` | 96 | `space-9` | `Spacing.huge` |
+
+**Запрещено:** raw px / EdgeInsets.all(16). Только через `Spacing.*`.
+
+### Radius
+
+Полный список — `design/03-tokens/radius-elevation.md`.
+
+| Token | px | Code |
+|-------|:--:|------|
+| `radius-none` | 0 | `Radius.none` (editorial flat default для cards) |
+| `radius-xs` | 2 | `Radius.xs` |
+| `radius-sm` | 4 | `Radius.sm` (buttons, inputs) |
+| `radius-md` | 8 | `Radius.md` |
+| `radius-full` | 9999 | `Radius.full` (avatars) |
 
 ---
 

@@ -287,8 +287,9 @@ Note: значения approximate, реальная верификация — 
 | **Score number** | `text-primary` (но bold serif) |
 | **Score label "React"** | `text-secondary` |
 | **Timestamp** | `text-secondary` |
-| **Endorse button (default)** | `border-default` outline, `text-secondary` text |
-| **Endorse button (active)** | `accent-soft` bg, `accent` text/icon |
+| **Like button (default)** | `text-secondary` icon (`Heart` outline) |
+| **Like button (active/liked)** | `accent` icon (`Heart` fill) |
+| **Reply / Retweet / Share buttons** | `text-secondary` default, `accent` on hover/active |
 | **Primary CTA "Post"** | `accent` bg, `text-on-accent` text |
 | **Code block** | `surface-sunken` bg, `text-primary` text, mono font |
 | **Inline `code`** | `surface-sunken` bg, `text-primary` text |

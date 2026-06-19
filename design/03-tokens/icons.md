@@ -64,20 +64,24 @@
 
 ## Canonical icon vocabulary
 
-Каждое действие в Bable использует **одну и ту же иконку** через всё UI. Не путаем.
+Каждое действие в Chirp использует **одну и ту же иконку** через всё UI. Не путаем.
 
 ### Actions
 
 | Action | Phosphor name | Visual |
 |--------|--------------|--------|
-| Endorse | `ArrowFatUp` (regular) | ⌃ (up-pointing arrow) |
+| Like | `Heart` (regular outline / fill when liked) | heart |
 | Reply | `ChatText` | speech bubble |
+| Retweet | `ArrowsClockwise` | circular arrows |
 | Share | `Share` | share node graph |
+| Bookmark | `BookmarkSimple` | bookmark |
 | More menu | `DotsThree` | … horizontal |
 | Edit | `PencilSimple` | pencil |
 | Delete | `Trash` | trash bin |
 | Flag | `Flag` | flag |
 | Copy | `Copy` | copy stack |
+| Mute | `SpeakerX` | speaker off |
+| Block | `Prohibit` | prohibition |
 
 ### Navigation
 

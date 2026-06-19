@@ -1,7 +1,7 @@
 # Code Block Syntax Theme
 
-> Bable про код. Code blocks — first-class content, не decoration.
-> Theme должна быть читабельной, согласована с editorial palette, и работать на обеих темах.
+> Code blocks в твитах и tweet detail — поддерживаемый формат контента, не decoration.
+> Theme читабельная, согласована с editorial palette, работает на обеих темах.
 
 ---
 

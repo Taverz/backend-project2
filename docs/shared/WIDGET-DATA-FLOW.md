@@ -382,9 +382,9 @@ GET /notifications?limit=20&cursor=...
 ```
 FollowButton
 ├── follow        ← пользователь НЕ подписан
-│   └── visual: outline, border=#1DA1F2, text="Follow"
+│   └── visual: secondary, border=`border-default`, text=`text-primary`, label "Follow"
 ├── following     ← пользователь подписан
-│   └── visual: filled, bg=green, text="Following"
+│   └── visual: primary, bg=`accent`, text=`text-on-accent`, label "Following"
 ├── pending       ← запрос в процессе (optimistic)
 │   └── visual: disabled, spinner
 └── hidden        ← свой профиль (нельзя подписаться на себя)

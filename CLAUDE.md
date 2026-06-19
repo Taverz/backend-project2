@@ -26,7 +26,7 @@
 | **Продукт** (что за фичи, сущности, API) | `/SOUL.md`, `docs/shared/` | Twitter-clone: User, Tweet, Follow, Like, Timeline, Notification |
 | **Визуальная айдентика** (как выглядит) | `design/03-tokens/`, `design/04-components/` | Editorial calm — тёплая бумажная палитра, terra cotta акцент, Phosphor icons, serif headlines |
 
-При конфликте имён компонентов или цветов между двумя слоями — **визуальный канон побеждает** для UI. Пример: `docs/shared/DESIGN-SYSTEM.md` исторически использует синий #1DA1F2; актуальные значения — `design/03-tokens/colours.md` (terra-500 = #C45A3D как accent).
+При конфликте имён компонентов или цветов между двумя слоями — **визуальный канон побеждает** для UI. Все конкретные hex / px / шрифты — только в `design/03-tokens/`. Никаких raw значений в коде или в `docs/shared/`. Маппинг semantic → primitive — `design/03-tokens/semantic-mappings.md`.
 
 Pivot-эксперимент с "IT-expertise platform" (Persona Recruiter, Expertise Score, Endorsement) **отвергнут** и лежит в `design/_archive_pivot/`. Не использовать сущности оттуда в новой работе. Извлекать только если будет явно сказано.
 
